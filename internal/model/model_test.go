@@ -21,12 +21,12 @@ func TestNewMode(t *testing.T) {
 	}
 
 	switch {
-	case testCard.title != testInput.title:
-		t.Errorf("extected %s, got %s", testInput.title, testCard.title)
-	case testCard.description != testInput.description:
-		t.Errorf("expected %s, gos %s", testCard.description, testInput.description)
-	case testCard.tag != testInput.tag:
-		t.Errorf("expected %s, gos %s", testCard.tag, testInput.tag)
+	case testCard.Title != testInput.title:
+		t.Errorf("extected %s, got %s", testInput.title, testCard.Title)
+	case testCard.Description != testInput.description:
+		t.Errorf("expected %s, gos %s", testCard.Description, testInput.description)
+	case testCard.Tag != testInput.tag:
+		t.Errorf("expected %s, gos %s", testCard.Tag, testInput.tag)
 	default:
 		t.Log("all tests passed")
 	}

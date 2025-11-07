@@ -19,3 +19,9 @@ func New() Config {
 		DBName: os.Getenv("DB_NAME"),
 	}
 }
+
+func (c Config) Get() []string {
+	envParams := make([]string, 0)
+	envParams = append(envParams, c.DBHost, c.DBPort, c.DBUSer, c.DBPass, c.DBName)
+	return envParams
+}

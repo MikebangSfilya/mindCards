@@ -2,29 +2,45 @@ package server
 
 import (
 	"context"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type handlers interface {
-	Add(ctx context.Context)
-	Delete(ctx context.Context)
-	Update(ctx context.Context)
+	AddCard(w http.ResponseWriter, r *http.Request)
+	DeleteCard(w http.ResponseWriter, r *http.Request)
+	UpdateCard(w http.ResponseWriter, r *http.Request)
 }
-
 type Server struct {
-	handle handlers
+	handlers handlers
+	server   *http.Server
 }
 
 func NewServer(handl handlers) *Server {
 	return &Server{
-		handle: handl,
+		handlers: handl,
 	}
 }
 
-func (s *Server) Start() {
-	r := chi.NewRouter()
-	r.Get("/card", func(w http.ResponseWriter, r *http.Request) {}) // заглушка
+func (s *Server) Start() error {
 
+	port := ":8080"
+
+	r := chi.NewRouter()
+	r.Post("/card", s.handlers.AddCard)
+	r.Delete("/card", s.handlers.DeleteCard)
+	r.Put("/card", s.handlers.UpdateCard)
+
+	s.server = &http.Server{
+		Addr:    port,
+		Handler: r,
+	}
+	log.Printf("started")
+	return s.server.ListenAndServe()
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
 }

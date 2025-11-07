@@ -5,22 +5,22 @@ import (
 )
 
 type MindCard struct {
-	title       string
-	description string
-	tag         string
-	createdAt   time.Time
-	levelStudy  int8
-	learned     bool
+	Title       string
+	Description string
+	Tag         string
+	CreatedAt   time.Time
+	LevelStudy  int8
+	Learned     bool
 }
 
 func NewCard(title, description, tag string) *MindCard {
 	return &MindCard{
-		title:       title,
-		description: description,
-		tag:         tag,
-		createdAt:   time.Now(),
-		levelStudy:  0,
-		learned:     false,
+		Title:       title,
+		Description: description,
+		Tag:         tag,
+		CreatedAt:   time.Now(),
+		LevelStudy:  0,
+		Learned:     false,
 	}
 
 }
