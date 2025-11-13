@@ -3,10 +3,12 @@ package service
 import (
 	"cards/internal/model"
 	"context"
+	"log/slog"
 )
 
 type Repo interface {
 	AddCard(ctx context.Context, card model.MindCard) error
+	DeleteCard(ctx context.Context, title string) error
 }
 
 type Service struct {
@@ -19,7 +21,17 @@ func New(repo Repo) *Service {
 	}
 }
 
-func (r *Service) AddCard(ctx context.Context, title, description, tag string) error {
+func (s *Service) AddCard(ctx context.Context, title, description, tag string) error {
 	card := model.NewCard(title, description, tag)
-	return r.Repo.AddCard(ctx, *card)
+	if err := s.Repo.AddCard(ctx, *card); err != nil {
+		slog.Error("failed to add card",
+			"error", err,
+			"package", "service")
+		return err
+	}
+	return nil
+}
+
+func (s *Service) DeleteCard(ctx context.Context, title string) error {
+	return s.Repo.DeleteCard(ctx, title)
 }

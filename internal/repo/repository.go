@@ -4,7 +4,6 @@ import (
 	"cards/internal/model"
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -28,15 +27,6 @@ func New(db *pgxpool.Pool) *pgxRepository {
 }
 
 func (r *pgxRepository) AddCard(ctx context.Context, card model.MindCard) error {
-	if r == nil {
-		slog.Error("repository is nil")
-		return fmt.Errorf("repository is nil")
-	}
-	if r.db == nil {
-		slog.Error("database connection is nil")
-		return fmt.Errorf("database connection is nil")
-	}
-
 	query := `
 	INSERT INTO memory_cards 
 	(title, description, tag, created_at, level_study, learned)
@@ -47,5 +37,23 @@ func (r *pgxRepository) AddCard(ctx context.Context, card model.MindCard) error 
 	if err != nil {
 		return fmt.Errorf("SQL error: %w", err)
 	}
-	return err
+	return nil
+}
+
+func (r *pgxRepository) DeleteCard(ctx context.Context, title string) error {
+	query := `
+	DELETE 
+	FROM memory_cards 
+	WHERE title = $1
+	`
+
+	result, err := r.db.Exec(ctx, query, title)
+	if err != nil {
+		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("card with title '%s' not found", title)
+	}
+	return nil
 }
