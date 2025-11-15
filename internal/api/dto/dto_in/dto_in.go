@@ -3,8 +3,8 @@ package dtoin
 //The Card is a descriptoin of mindCard DTO. Collects data to create card
 type Card struct {
 	Title       string `json:"title"`
-	Description string `json:"Description"`
-	Tag         string `json:"Tag"`
+	Description string `json:"description"`
+	Tag         string `json:"tag"`
 }
 
 //The DTODel is a DTO model that has a title to delete card by its name
@@ -14,7 +14,7 @@ type DTODel struct {
 
 type Update struct {
 	Title          string `json:"title"`
-	NewDeccription string `json:"Description"`
+	NewDeccription string `json:"description"`
 }
 
 type UpdateLvlLearn struct {

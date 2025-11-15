@@ -29,9 +29,11 @@ func (s *Server) Start() error {
 	port := ":8080"
 
 	r := chi.NewRouter()
-	r.Post("/card", s.handlers.AddCard)
-	r.Delete("/card", s.handlers.DeleteCard)
-	r.Put("/card", s.handlers.UpdateCard)
+	r.Route("/card", func(r chi.Router) {
+		r.Post("/", s.handlers.AddCard)
+		r.Delete("/", s.handlers.DeleteCard)
+		r.Put("/", s.handlers.UpdateCard)
+	})
 
 	s.server = &http.Server{
 		Addr:    port,
