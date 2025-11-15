@@ -16,3 +16,8 @@ type Update struct {
 	Title          string `json:"title"`
 	NewDeccription string `json:"Description"`
 }
+
+type UpdateLvlLearn struct {
+	Title string `json:"title"`
+	Level int    `json:"level"`
+}

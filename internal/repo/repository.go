@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// интерфейс для сервис слоя, потом перенести
 type Repo interface {
 	AddCard(ctx context.Context, card model.MindCard) error
 	UptadeCardDescription(ctx context.Context)
@@ -26,14 +27,15 @@ func New(db *pgxpool.Pool) *pgxRepository {
 	return repo
 }
 
-func (r *pgxRepository) AddCard(ctx context.Context, card model.MindCard) error {
+func (r *pgxRepository) AddCard(ctx context.Context, card *model.MindCard) error {
 	query := `
 	INSERT INTO memory_cards 
 	(title, description, tag, created_at, level_study, learned)
 	VALUES ($1, $2, $3, $4, $5, $6)
+	RETURNING id
 	`
 
-	_, err := r.db.Exec(ctx, query, card.Title, card.Description, card.Tag, card.CreatedAt, card.LevelStudy, card.Learned)
+	err := r.db.QueryRow(ctx, query, card.Title, card.Description, card.Tag, card.CreatedAt, card.LevelStudy, card.Learned).Scan(&card.ID)
 	if err != nil {
 		return fmt.Errorf("SQL error: %w", err)
 	}
@@ -56,4 +58,8 @@ func (r *pgxRepository) DeleteCard(ctx context.Context, title string) error {
 		return fmt.Errorf("card with title '%s' not found", title)
 	}
 	return nil
+}
+
+func (s *pgxRepository) UptadeCardDescription(ctx context.Context, updt []string) {
+
 }

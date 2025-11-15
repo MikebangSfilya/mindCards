@@ -1,10 +1,10 @@
 package main
 
 import (
-	"cards/database"
 	"cards/internal/api/handlers"
 	"cards/internal/api/server"
 	"cards/internal/configurate"
+	"cards/internal/database"
 	"cards/internal/repo"
 	"cards/internal/service"
 	"context"

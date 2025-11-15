@@ -5,12 +5,13 @@ import (
 )
 
 type MindCard struct {
-	Title       string
-	Description string
-	Tag         string
-	CreatedAt   time.Time
-	LevelStudy  int8
-	Learned     bool
+	ID          int64     `json:"id" db:"id"`
+	Title       string    `json:"title" db:"title"`
+	Description string    `json:"description" db:"description"`
+	Tag         string    `json:"tag" db:"tag"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	LevelStudy  int8      `json:"level_study" db:"level_study"`
+	Learned     bool      `json:"learned" db:"learned"`
 }
 
 func NewCard(title, description, tag string) *MindCard {
