@@ -15,7 +15,7 @@ func TestNewMode(t *testing.T) {
 		tag:         "#Test",
 	}
 
-	testCard := NewCard(testInput.title, testInput.description, testInput.tag)
+	testCard, _ := NewCard(testInput.title, testInput.description, testInput.tag)
 	if testCard == nil {
 		t.Fatal("expected card struct, got nil")
 	}

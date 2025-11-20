@@ -16,11 +16,13 @@ type handlers interface {
 type Server struct {
 	handlers handlers
 	server   *http.Server
+	router   *chi.Mux
 }
 
 func NewServer(handl handlers) *Server {
 	return &Server{
 		handlers: handl,
+		router:   chi.NewRouter(),
 	}
 }
 
@@ -28,8 +30,7 @@ func (s *Server) Start() error {
 
 	port := ":8080"
 
-	r := chi.NewRouter()
-	r.Route("/card", func(r chi.Router) {
+	s.router.Route("/card", func(r chi.Router) {
 		r.Post("/", s.handlers.AddCard)
 		r.Delete("/", s.handlers.DeleteCard)
 		r.Put("/", s.handlers.UpdateCard)
@@ -37,7 +38,7 @@ func (s *Server) Start() error {
 
 	s.server = &http.Server{
 		Addr:    port,
-		Handler: r,
+		Handler: s.router,
 	}
 	log.Printf("started")
 	return s.server.ListenAndServe()

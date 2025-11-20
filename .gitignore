@@ -1,3 +1,5 @@
 .env
 *.yml
 *.sql
+sort
+Makefile

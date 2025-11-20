@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -14,7 +15,10 @@ type MindCard struct {
 	Learned     bool      `json:"learned" db:"learned"`
 }
 
-func NewCard(title, description, tag string) *MindCard {
+func NewCard(title, description, tag string) (*MindCard, error) {
+	if title == "" || description == "" || tag == "" {
+		return nil, fmt.Errorf("all fields are required")
+	}
 	return &MindCard{
 		Title:       title,
 		Description: description,
@@ -22,6 +26,6 @@ func NewCard(title, description, tag string) *MindCard {
 		CreatedAt:   time.Now(),
 		LevelStudy:  0,
 		Learned:     false,
-	}
+	}, nil
 
 }
