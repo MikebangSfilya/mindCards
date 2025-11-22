@@ -1,0 +1,122 @@
+package service
+
+import (
+	dtoin "cards/internal/api/dto/dto_in"
+	dtoout "cards/internal/api/dto/dto_out"
+	"cards/internal/model"
+	"context"
+	"fmt"
+	"log/slog"
+)
+
+type CardCRUDService struct {
+	Repo Repo
+}
+
+func NewCardCRUDService(repo Repo) *CardCRUDService {
+	return &CardCRUDService{Repo: repo}
+}
+
+// Add card to DB
+func (s *CardCRUDService) AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MindCardDTO, error) {
+	card, err := model.NewCard(cardsParams.Title, cardsParams.Description, cardsParams.Tag)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Repo.AddCard(ctx, card); err != nil {
+		slog.Error("failed to add card",
+			"error", err,
+			"package", "service")
+		return nil, err
+	}
+
+	return &dtoout.MindCardDTO{
+		ID:          card.ID,
+		Title:       card.Title,
+		Description: card.Description,
+		Tag:         card.Tag,
+		CreatedAt:   card.CreatedAt,
+		LevelStudy:  card.LevelStudy,
+		Learned:     card.Learned,
+	}, nil
+}
+
+// Delete card from DB
+func (s *CardCRUDService) DeleteCard(ctx context.Context, id string) error {
+	if id == "" {
+		return fmt.Errorf("card not exist")
+	}
+
+	return s.Repo.DeleteCard(ctx, id)
+}
+
+// Update new description in DB
+func (s *CardCRUDService) UpdateCardDescription(ctx context.Context, id string, cardsUp dtoin.Update) error {
+	if id == "" {
+		return fmt.Errorf("nil id")
+	}
+	if cardsUp.NewDeccription == "" {
+		return fmt.Errorf("nil desc")
+	}
+
+	if err := s.Repo.UptadeCardDescription(ctx, id, cardsUp.NewDeccription); err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+// Возможно не понадобится
+func (s *CardCRUDService) UpdateLvl() {
+
+}
+
+// Get list of cards
+func (s *CardCRUDService) GetCards(ctx context.Context, pagination dtoin.LimitOffset) (map[string]model.MindCard, error) {
+	return s.Repo.GetCards(ctx, pagination.Limit, pagination.Offset)
+}
+
+// Get cards filtered by Tag
+func (s *CardCRUDService) GetCardsByTag(ctx context.Context, tag string, pagination dtoin.LimitOffset) (map[string]model.MindCard, error) {
+
+	rows, err := s.Repo.GetCardsByTag(ctx, tag, pagination.Limit, pagination.Offset)
+	if err != nil {
+		return nil, err
+	}
+
+	cards := make(map[string]model.MindCard)
+
+	for _, row := range rows {
+		card := model.MindCard{
+			ID:          row.ID,
+			Title:       row.Title,
+			Description: row.Description,
+			Tag:         row.Tag,
+			CreatedAt:   row.CreatedAt,
+			LevelStudy:  row.LevelStudy,
+			Learned:     row.Learned,
+		}
+		cards[fmt.Sprintf("%d", card.ID)] = card
+	}
+	return cards, nil
+}
+
+// Get one card by unic ID
+func (s *CardCRUDService) GetCardById(ctx context.Context, id string) (model.MindCard, error) {
+	row, err := s.Repo.GetCardById(ctx, id)
+	if err != nil {
+		return model.MindCard{}, err
+	}
+
+	return model.MindCard{
+		ID:          row.ID,
+		Title:       row.Title,
+		Description: row.Description,
+		Tag:         row.Tag,
+		CreatedAt:   row.CreatedAt,
+		LevelStudy:  row.LevelStudy,
+		Learned:     row.Learned,
+	}, nil
+
+}
