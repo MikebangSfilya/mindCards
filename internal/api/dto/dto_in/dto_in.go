@@ -15,19 +15,13 @@ type DTODel struct {
 }
 
 type Update struct {
-	Title          string `json:"title"`
 	NewDeccription string `json:"description"`
 }
 
-type UpdateLvlLearn struct {
-	Title string `json:"title"`
-	Level int    `json:"level"`
-}
-
-type GetCardsByTag struct {
-	LimitOffset
-	Tag string `json:"tag"`
-}
+// type UpdateLvlLearn struct {
+// 	Title string `json:"title"`
+// 	Level int    `json:"level"`
+// }
 
 type LimitOffset struct {
 	Limit  int16 `json:"limit"`

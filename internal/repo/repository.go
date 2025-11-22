@@ -2,6 +2,7 @@ package repo
 
 import (
 	"cards/internal/model"
+	"cards/internal/storage"
 	"context"
 	"fmt"
 	"strings"
@@ -56,7 +57,18 @@ func (r *pgxRepository) DeleteCard(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *pgxRepository) UptadeCardDescription(ctx context.Context, updt []string) {
+func (r *pgxRepository) UptadeCardDescription(ctx context.Context, id, newDesc string) error {
+	query := `
+	UPDATE memory_cards
+	SET card_description = $1
+	WHERE id = $2
+	`
+
+	_, err := r.db.Exec(ctx, query, newDesc, id)
+	if err != nil {
+		return err
+	}
+	return nil
 
 }
 
@@ -98,7 +110,7 @@ func (r *pgxRepository) GetCards(ctx context.Context, limit, offset int16) (map[
 	return cards, err
 }
 
-func (r *pgxRepository) GetCardsByTag(ctx context.Context, tag string, limit, offset int16) (map[string]model.MindCard, error) {
+func (r *pgxRepository) GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]storage.CardRow, error) {
 	query := `
 	SELECT id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
@@ -112,31 +124,48 @@ func (r *pgxRepository) GetCardsByTag(ctx context.Context, tag string, limit, of
 	}
 	defer rows.Close()
 
-	cards := make(map[string]model.MindCard)
+	var cardsRow []storage.CardRow
 	for rows.Next() {
-		var card model.MindCard
+		var Row storage.CardRow
 		err := rows.Scan(
-			&card.ID,
-			&card.Title,
-			&card.Description,
-			&card.Tag,
-			&card.CreatedAt,
-			&card.LevelStudy,
-			&card.Learned,
+			&Row.ID,
+			&Row.Title,
+			&Row.Description,
+			&Row.Tag,
+			&Row.CreatedAt,
+			&Row.LevelStudy,
+			&Row.Learned,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan failed: %w", err)
 		}
-		cards[fmt.Sprintf("%d", card.ID)] = card
+		cardsRow = append(cardsRow, Row)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows error: %w", err)
-	}
-
-	return cards, err
+	return cardsRow, rows.Err()
 }
 
-func (r *pgxRepository) GetCardById(ctx context.Context, id int) model.MindCard {
-	return model.MindCard{}
+func (r *pgxRepository) GetCardById(ctx context.Context, id string) (storage.CardRow, error) {
+	query := `
+	SELECT *
+	FROM memory_cards
+	WHERE id = $1
+	`
+
+	row := r.db.QueryRow(ctx, query, id)
+	card := storage.CardRow{}
+	err := row.Scan(
+		&card.ID,
+		&card.Title,
+		&card.Description,
+		&card.Tag,
+		&card.CreatedAt,
+		&card.LevelStudy,
+		&card.Learned,
+	)
+	if err != nil {
+		return storage.CardRow{}, err
+	}
+
+	return card, nil
 }

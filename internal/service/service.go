@@ -4,6 +4,7 @@ import (
 	dtoin "cards/internal/api/dto/dto_in"
 	dtoout "cards/internal/api/dto/dto_out"
 	"cards/internal/model"
+	"cards/internal/storage"
 	"context"
 	"fmt"
 	"log/slog"
@@ -13,11 +14,11 @@ import (
 
 type Repo interface {
 	AddCard(ctx context.Context, card *model.MindCard) error
-	UptadeCardDescription(ctx context.Context, updt []string)
+	UptadeCardDescription(ctx context.Context, id, newDesc string) error
 	DeleteCard(ctx context.Context, id string) error
 	GetCards(ctx context.Context, limit, offset int16) (map[string]model.MindCard, error)
-	GetCardById(ctx context.Context, id int) model.MindCard
-	GetCardsByTag(ctx context.Context, tag string, limit, offset int16) (map[string]model.MindCard, error)
+	GetCardById(ctx context.Context, id string) (storage.CardRow, error)
+	GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]storage.CardRow, error)
 }
 
 type Service struct {
@@ -61,17 +62,17 @@ func (s *Service) DeleteCard(ctx context.Context, id string) error {
 	return s.Repo.DeleteCard(ctx, id)
 }
 
-func (s *Service) UpdateCardDescription(ctx context.Context, cardsUp dtoin.Update) error {
-	if cardsUp.Title == "" {
-		return fmt.Errorf("nil title")
+func (s *Service) UpdateCardDescription(ctx context.Context, id string, cardsUp dtoin.Update) error {
+	if id == "" {
+		return fmt.Errorf("nil id")
 	}
 	if cardsUp.NewDeccription == "" {
 		return fmt.Errorf("nil desc")
 	}
 
-	cardToRepo := []string{cardsUp.Title, cardsUp.NewDeccription}
-
-	s.Repo.UptadeCardDescription(ctx, cardToRepo)
+	if err := s.Repo.UptadeCardDescription(ctx, id, cardsUp.NewDeccription); err != nil {
+		return err
+	}
 
 	return nil
 
@@ -80,10 +81,45 @@ func (s *Service) UpdateCardDescription(ctx context.Context, cardsUp dtoin.Updat
 func (s *Service) GetCards(ctx context.Context, pagination dtoin.LimitOffset) (map[string]model.MindCard, error) {
 	return s.Repo.GetCards(ctx, pagination.Limit, pagination.Offset)
 }
+
 func (s *Service) GetCardsByTag(ctx context.Context, tag string, pagination dtoin.LimitOffset) (map[string]model.MindCard, error) {
-	return s.Repo.GetCardsByTag(ctx, tag, pagination.Limit, pagination.Offset)
+
+	rows, err := s.Repo.GetCardsByTag(ctx, tag, pagination.Limit, pagination.Offset)
+	if err != nil {
+		return nil, err
+	}
+
+	cards := make(map[string]model.MindCard)
+
+	for _, row := range rows {
+		card := model.MindCard{
+			ID:          row.ID,
+			Title:       row.Title,
+			Description: row.Description,
+			Tag:         row.Tag,
+			CreatedAt:   row.CreatedAt,
+			LevelStudy:  row.LevelStudy,
+			Learned:     row.Learned,
+		}
+		cards[fmt.Sprintf("%d", card.ID)] = card
+	}
+	return cards, nil
 }
 
-func (s *Service) GetCardById(ctx context.Context, id int) model.MindCard {
-	return s.Repo.GetCardById(ctx, id)
+func (s *Service) GetCardById(ctx context.Context, id string) (model.MindCard, error) {
+	row, err := s.Repo.GetCardById(ctx, id)
+	if err != nil {
+		return model.MindCard{}, err
+	}
+
+	return model.MindCard{
+		ID:          row.ID,
+		Title:       row.Title,
+		Description: row.Description,
+		Tag:         row.Tag,
+		CreatedAt:   row.CreatedAt,
+		LevelStudy:  row.LevelStudy,
+		Learned:     row.Learned,
+	}, nil
+
 }

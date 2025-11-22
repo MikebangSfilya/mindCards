@@ -29,9 +29,10 @@ const (
 type Service interface {
 	AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MindCardDTO, error)
 	DeleteCard(ctx context.Context, id string) error
-	UpdateCardDescription(ctx context.Context, cardsUp dtoin.Update) error
+	UpdateCardDescription(ctx context.Context, id string, cardsUp dtoin.Update) error
 	GetCards(ctx context.Context, pagination dtoin.LimitOffset) (map[string]model.MindCard, error)
 	GetCardsByTag(ctx context.Context, tag string, pagination dtoin.LimitOffset) (map[string]model.MindCard, error)
+	GetCardById(ctx context.Context, id string) (model.MindCard, error)
 }
 
 // Handlers stores the service layer dependency
@@ -91,13 +92,15 @@ func (h *Handlers) UpdateCard(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
 	defer cancel()
 
+	upId := chi.URLParam(r, "id")
+
 	dtoUp := dtoin.Update{}
 	if err := decoder(r, &dtoUp); err != nil {
 		h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
 		return
 	}
 
-	if err := h.Service.UpdateCardDescription(ctx, dtoUp); err != nil {
+	if err := h.Service.UpdateCardDescription(ctx, upId, dtoUp); err != nil {
 		h.handleError(w, err, ErrUpdateCard, http.StatusBadRequest)
 	}
 
@@ -153,6 +156,28 @@ func (h *Handlers) GetByTag(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := encoder(w, cards); err != nil {
+		h.handleError(w, err, ErrEncodeJSON, http.StatusInternalServerError)
+		return
+	}
+
+}
+
+func (h *Handlers) GetById(w http.ResponseWriter, r *http.Request) {
+
+	id := chi.URLParam(r, "id")
+
+	ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
+	defer cancel()
+
+	card, err := h.Service.GetCardById(ctx, id)
+	if err != nil {
+		h.handleError(w, err, "potom", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := encoder(w, card); err != nil {
 		h.handleError(w, err, ErrEncodeJSON, http.StatusInternalServerError)
 		return
 	}
