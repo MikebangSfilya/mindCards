@@ -38,20 +38,20 @@ func (r *pgxRepository) AddCard(ctx context.Context, card *model.MindCard) error
 	return nil
 }
 
-func (r *pgxRepository) DeleteCard(ctx context.Context, title string) error {
+func (r *pgxRepository) DeleteCard(ctx context.Context, id string) error {
 	query := `
 	DELETE 
 	FROM memory_cards 
-	WHERE title = $1
+	WHERE id = $1
 	`
 
-	result, err := r.db.Exec(ctx, query, title)
+	result, err := r.db.Exec(ctx, query, id)
 	if err != nil {
 		return err
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("card with title '%s' not found", title)
+		return fmt.Errorf("card with title '%s' not found", id)
 	}
 	return nil
 }

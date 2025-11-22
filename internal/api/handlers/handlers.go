@@ -28,7 +28,7 @@ const (
 // Service is an interface for connecting to the service layer
 type Service interface {
 	AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MindCardDTO, error)
-	DeleteCard(ctx context.Context, title string) error
+	DeleteCard(ctx context.Context, id string) error
 	UpdateCardDescription(ctx context.Context, cardsUp dtoin.Update) error
 	GetCards(ctx context.Context, pagination dtoin.LimitOffset) (map[string]model.MindCard, error)
 	GetCardsByTag(ctx context.Context, tag string, pagination dtoin.LimitOffset) (map[string]model.MindCard, error)
@@ -75,21 +75,14 @@ func (h *Handlers) DeleteCard(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
 	defer cancel()
 
-	var dtoDel dtoin.DTODel
-	if err := decoder(r, &dtoDel); err != nil {
-		h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
-		return
-	}
+	delId := chi.URLParam(r, "id")
 
-	if err := h.Service.DeleteCard(ctx, dtoDel.Title); err != nil {
+	if err := h.Service.DeleteCard(ctx, delId); err != nil {
 		h.handleError(w, err, ErrDeleteCard, http.StatusBadRequest)
 		return
 	}
-	resp := dtoout.NewDelDTO(dtoDel.Title)
-	if err := encoder(w, resp); err != nil {
-		h.handleError(w, err, ErrEncodeJSON, http.StatusBadRequest)
-		return
-	}
+
+	w.WriteHeader(http.StatusNoContent)
 
 }
 

@@ -34,9 +34,9 @@ func (s *Server) Start() error {
 
 	s.router.Route("/card", func(r chi.Router) {
 		r.Post("/", s.handlers.AddCard)
-		r.Delete("/", s.handlers.DeleteCard)
+		r.Delete("/{id}", s.handlers.DeleteCard)
 		r.Put("/", s.handlers.UpdateCard)
-		r.Get("/{tag}", s.handlers.GetByTag)
+		r.Get("/tag/{tag}", s.handlers.GetByTag)
 		r.Get("/", s.handlers.GetCards)
 
 	})
