@@ -15,8 +15,9 @@ type Repo interface {
 	AddCard(ctx context.Context, card *model.MindCard) error
 	UptadeCardDescription(ctx context.Context, updt []string)
 	DeleteCard(ctx context.Context, title string) error
-	GetCards(ctx context.Context, limit, offset int16) (map[int]model.MindCard, error)
+	GetCards(ctx context.Context, limit, offset int16) (map[string]model.MindCard, error)
 	GetCardById(ctx context.Context, id int) model.MindCard
+	GetCardsByTag(ctx context.Context, tag string, limit, offset int16) (map[string]model.MindCard, error)
 }
 
 type Service struct {
@@ -76,8 +77,11 @@ func (s *Service) UpdateCardDescription(ctx context.Context, cardsUp dtoin.Updat
 
 }
 
-func (s *Service) GetCards(ctx context.Context, pagination dtoin.GetCards) (map[int]model.MindCard, error) {
+func (s *Service) GetCards(ctx context.Context, pagination dtoin.LimitOffset) (map[string]model.MindCard, error) {
 	return s.Repo.GetCards(ctx, pagination.Limit, pagination.Offset)
+}
+func (s *Service) GetCardsByTag(ctx context.Context, tag string, pagination dtoin.LimitOffset) (map[string]model.MindCard, error) {
+	return s.Repo.GetCardsByTag(ctx, tag, pagination.Limit, pagination.Offset)
 }
 
 func (s *Service) GetCardById(ctx context.Context, id int) model.MindCard {

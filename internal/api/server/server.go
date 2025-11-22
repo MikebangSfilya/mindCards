@@ -12,6 +12,8 @@ type handlers interface {
 	AddCard(w http.ResponseWriter, r *http.Request)
 	DeleteCard(w http.ResponseWriter, r *http.Request)
 	UpdateCard(w http.ResponseWriter, r *http.Request)
+	GetCards(w http.ResponseWriter, r *http.Request)
+	GetByTag(w http.ResponseWriter, r *http.Request)
 }
 type Server struct {
 	handlers handlers
@@ -34,6 +36,9 @@ func (s *Server) Start() error {
 		r.Post("/", s.handlers.AddCard)
 		r.Delete("/", s.handlers.DeleteCard)
 		r.Put("/", s.handlers.UpdateCard)
+		r.Get("/{tag}", s.handlers.GetByTag)
+		r.Get("/", s.handlers.GetCards)
+
 	})
 
 	s.server = &http.Server{

@@ -24,12 +24,17 @@ type UpdateLvlLearn struct {
 	Level int    `json:"level"`
 }
 
-type GetCards struct {
+type GetCardsByTag struct {
+	LimitOffset
+	Tag string `json:"tag"`
+}
+
+type LimitOffset struct {
 	Limit  int16 `json:"limit"`
 	Offset int16 `json:"offset"`
 }
 
-func (g GetCards) PaginationDefault() GetCards {
+func (g *LimitOffset) PaginationDefault() {
 	if g.Limit == 0 {
 		g.Limit = 50
 	}
@@ -39,5 +44,4 @@ func (g GetCards) PaginationDefault() GetCards {
 	if g.Offset < 0 {
 		g.Offset = 0
 	}
-	return g
 }

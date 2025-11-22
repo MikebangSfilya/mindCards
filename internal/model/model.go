@@ -8,7 +8,7 @@ import (
 type MindCard struct {
 	ID          int64     `json:"id" db:"id"`
 	Title       string    `json:"title" db:"title"`
-	Description string    `json:"description" db:"description"`
+	Description string    `json:"description" db:"card_description"`
 	Tag         string    `json:"tag" db:"tag"`
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 	LevelStudy  int8      `json:"level_study" db:"level_study"`
