@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+var errAllFieldNeeder = fmt.Errorf("all fields are required")
+
 type MindCard struct {
 	ID          int64     `json:"id" db:"id"`
 	Title       string    `json:"title" db:"title"`
@@ -17,7 +19,7 @@ type MindCard struct {
 
 func NewCard(title, description, tag string) (*MindCard, error) {
 	if title == "" || description == "" || tag == "" {
-		return nil, fmt.Errorf("all fields are required")
+		return nil, errAllFieldNeeder
 	}
 	return &MindCard{
 		Title:       title,

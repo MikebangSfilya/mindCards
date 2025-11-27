@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strconv"
 )
 
 // help func for decode json
@@ -22,4 +23,12 @@ func (h *Handlers) handleError(w http.ResponseWriter, err error, msg string, cod
 	slog.Error(msg, "err", err, "package", "handlers")
 	errDTO := dtoout.NewErr(err)
 	http.Error(w, errDTO.ToString(), code)
+}
+
+func (h *Handlers) stringToInt(in string) (int, error) {
+	if in == "" {
+		return 0, nil
+	}
+
+	return strconv.Atoi(in)
 }

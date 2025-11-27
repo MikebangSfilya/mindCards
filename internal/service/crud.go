@@ -10,25 +10,31 @@ import (
 )
 
 type CardCRUDService struct {
-	Repo Repo
+	Repo   Repo
+	logger *slog.Logger
 }
 
-func NewCardCRUDService(repo Repo) *CardCRUDService {
-	return &CardCRUDService{Repo: repo}
+func NewCardCRUDService(repo Repo, logger *slog.Logger) *CardCRUDService {
+
+	return &CardCRUDService{
+		Repo:   repo,
+		logger: logger,
+	}
 }
 
 // Add card to DB
 func (s *CardCRUDService) AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MindCardDTO, error) {
 	card, err := model.NewCard(cardsParams.Title, cardsParams.Description, cardsParams.Tag)
 	if err != nil {
+		s.logger.Error("failed to add card", "error", err)
 		return nil, err
 	}
 	if err := s.Repo.AddCard(ctx, card); err != nil {
-		slog.Error("failed to add card",
-			"error", err,
-			"package", "service")
+		s.logger.Error("failed to add card", "error", err)
 		return nil, err
 	}
+
+	s.logger.Info("adding card", "title", cardsParams.Title)
 
 	return &dtoout.MindCardDTO{
 		ID:          card.ID,
@@ -44,7 +50,8 @@ func (s *CardCRUDService) AddCard(ctx context.Context, cardsParams dtoin.Card) (
 // Delete card from DB
 func (s *CardCRUDService) DeleteCard(ctx context.Context, id string) error {
 	if id == "" {
-		return fmt.Errorf("card not exist")
+		s.logger.Warn("failed to delete card", "Warn", ErrNotExist)
+		return ErrNotExist
 	}
 
 	return s.Repo.DeleteCard(ctx, id)
@@ -73,8 +80,8 @@ func (s *CardCRUDService) UpdateLvl() {
 }
 
 // Get list of cards
-func (s *CardCRUDService) GetCards(ctx context.Context, pagination dtoin.LimitOffset) (map[string]model.MindCard, error) {
-	return s.Repo.GetCards(ctx, pagination.Limit, pagination.Offset)
+func (s *CardCRUDService) GetCards(ctx context.Context, limit, offset int16) (map[string]model.MindCard, error) {
+	return s.Repo.GetCards(ctx, limit, offset)
 }
 
 // Get cards filtered by Tag

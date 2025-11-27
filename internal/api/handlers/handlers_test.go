@@ -32,3 +32,7 @@ func TestDecoder(t *testing.T) {
 	}
 
 }
+
+func TestBase(t *testing.T) {
+
+}

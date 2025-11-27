@@ -6,6 +6,7 @@ import (
 	"cards/internal/model"
 	"cards/internal/storage"
 	"context"
+	"log/slog"
 )
 
 // интерфейс для связи с репозиторий
@@ -20,13 +21,16 @@ type Repo interface {
 }
 
 type Service struct {
-	Crud *CardCRUDService
+	Crud   *CardCRUDService
+	logger *slog.Logger
 	// RandCard RepoCard
 }
 
-func New(repo Repo) *Service {
+func New(repo Repo, logger *slog.Logger) *Service {
+	serviceLogger := logger.With("component", "service")
 	return &Service{
-		Crud: NewCardCRUDService(repo),
+		Crud:   NewCardCRUDService(repo, serviceLogger),
+		logger: serviceLogger,
 		// RandCard: randCard,
 	}
 }
@@ -52,8 +56,8 @@ func (s *Service) UpdateLvl() {
 }
 
 // Get list of cards
-func (s *Service) GetCards(ctx context.Context, pagination dtoin.LimitOffset) (map[string]model.MindCard, error) {
-	return s.Crud.GetCards(ctx, pagination)
+func (s *Service) GetCards(ctx context.Context, limit, offset int16) (map[string]model.MindCard, error) {
+	return s.Crud.GetCards(ctx, int16(limit), int16(offset))
 }
 
 // Get cards filtered by Tag

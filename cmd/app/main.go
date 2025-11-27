@@ -36,8 +36,12 @@ func main() {
 	}
 	defer db.Close()
 
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+
 	repo := repo.New(db)
-	service := service.New(repo)
+	service := service.New(repo, logger)
 	handle := handlers.New(service)
 
 	srv := server.NewServer(handle)
@@ -58,7 +62,9 @@ func main() {
 
 	log.Println("Shutting down gracefully...")
 
-	srv.Shutdown(shutdown)
+	if err := srv.Shutdown(shutdown); err != nil {
+		log.Print("shutdown fail")
+	}
 	log.Print("Shutdown end")
 
 }
