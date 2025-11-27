@@ -61,8 +61,8 @@ func (s *Service) GetCards(ctx context.Context, limit, offset int16) (map[string
 }
 
 // Get cards filtered by Tag
-func (s *Service) GetCardsByTag(ctx context.Context, tag string, pagination dtoin.LimitOffset) (map[string]model.MindCard, error) {
-	return s.Crud.GetCardsByTag(ctx, tag, pagination)
+func (s *Service) GetCardsByTag(ctx context.Context, tag string, limit, offset int16) (map[string]model.MindCard, error) {
+	return s.Crud.GetCardsByTag(ctx, tag, limit, offset)
 }
 
 // Get one card by unic ID

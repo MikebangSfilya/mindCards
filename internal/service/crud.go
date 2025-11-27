@@ -85,9 +85,9 @@ func (s *CardCRUDService) GetCards(ctx context.Context, limit, offset int16) (ma
 }
 
 // Get cards filtered by Tag
-func (s *CardCRUDService) GetCardsByTag(ctx context.Context, tag string, pagination dtoin.LimitOffset) (map[string]model.MindCard, error) {
+func (s *CardCRUDService) GetCardsByTag(ctx context.Context, tag string, limit, offset int16) (map[string]model.MindCard, error) {
 
-	rows, err := s.Repo.GetCardsByTag(ctx, tag, pagination.Limit, pagination.Offset)
+	rows, err := s.Repo.GetCardsByTag(ctx, tag, limit, offset)
 	if err != nil {
 		return nil, err
 	}

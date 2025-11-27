@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	dtoin "cards/internal/api/dto/dto_in"
 	"context"
 	"fmt"
 	"net/http"
@@ -57,15 +56,30 @@ func (h *Handlers) GetByTag(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
 	defer cancel()
 
-	dtoIn := dtoin.LimitOffset{}
-	if err := decoder(r, &dtoIn); err != nil {
-		h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
+	limitStr := r.URL.Query().Get("limit")
+	offsetStr := r.URL.Query().Get("offset")
+	limit, err := h.stringToInt(limitStr)
+	if err != nil {
+		h.handleError(w, fmt.Errorf("invalid limit parameter: %w", err), "Invalid limit", http.StatusBadRequest)
+		return
+	}
+	offset, err := h.stringToInt(offsetStr)
+	if err != nil {
+		h.handleError(w, fmt.Errorf("invalid offset parameter: %w", err), "Invalid limit", http.StatusBadRequest)
 		return
 	}
 
-	dtoIn.PaginationDefault()
+	if limit == 0 {
+		limit = 50
+	} else if limit > 1000 {
+		limit = 1000
+	}
 
-	cards, err := h.Service.GetCardsByTag(ctx, tag, dtoIn)
+	if offset < 0 {
+		offset = 0
+	}
+
+	cards, err := h.Service.GetCardsByTag(ctx, tag, int16(limit), int16(offset))
 	if err != nil {
 		h.handleError(w, err, "potom", http.StatusInternalServerError)
 		return
