@@ -25,6 +25,7 @@ func (h *Handlers) handleError(w http.ResponseWriter, err error, msg string, cod
 	http.Error(w, errDTO.ToString(), code)
 }
 
+// help func to convert str to int
 func (h *Handlers) stringToInt(in string) (int, error) {
 	if in == "" {
 		return 0, nil
