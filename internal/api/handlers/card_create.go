@@ -19,6 +19,7 @@ func (h *Handlers) AddCard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result := make([]dtoout.MDAddedDTO, 0, len(DTOin))
+	//TODO переделать в отдачу самого массива
 	for i := range DTOin {
 		cardDTO, err := h.Service.AddCard(ctx, DTOin[i])
 		if err != nil {
