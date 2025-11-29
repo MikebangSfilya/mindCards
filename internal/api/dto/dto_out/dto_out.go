@@ -8,14 +8,11 @@ type DTOdel_out struct {
 	TimeDel time.Time `json:"TimeDel"`
 }
 
-type MindCardDTO struct {
-	ID          int64     `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Tag         string    `json:"tag"`
-	CreatedAt   time.Time `json:"created_at"`
-	LevelStudy  int8      `json:"level_study"`
-	Learned     bool      `json:"learned"`
+type MDAddedDTO struct {
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Tag         string `json:"tag"`
 }
 
 func NewDelDTO(obj string) DTOdel_out {

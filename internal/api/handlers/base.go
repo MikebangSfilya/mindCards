@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	baseTimeOut = time.Duration(15 * time.Second)
+	baseTimeOut    = time.Duration(15 * time.Second)
+	addCardTimeOut = time.Duration(60 * time.Second)
 )
 
 const (
@@ -22,7 +23,7 @@ const (
 
 // Service is an interface for connecting to the service layer
 type Service interface {
-	AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MindCardDTO, error)
+	AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MDAddedDTO, error)
 	DeleteCard(ctx context.Context, id string) error
 	UpdateCardDescription(ctx context.Context, id string, cardsUp dtoin.Update) error
 	GetCards(ctx context.Context, limit, offset int16) (map[string]model.MindCard, error)

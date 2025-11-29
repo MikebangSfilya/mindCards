@@ -23,7 +23,7 @@ func NewCardCRUDService(repo Repo, logger *slog.Logger) *CardCRUDService {
 }
 
 // Add card to DB
-func (s *CardCRUDService) AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MindCardDTO, error) {
+func (s *CardCRUDService) AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MDAddedDTO, error) {
 	card, err := model.NewCard(cardsParams.Title, cardsParams.Description, cardsParams.Tag)
 	if err != nil {
 		s.logger.Error("failed to add card", "error", err)
@@ -36,14 +36,11 @@ func (s *CardCRUDService) AddCard(ctx context.Context, cardsParams dtoin.Card) (
 
 	s.logger.Info("adding card", "title", cardsParams.Title)
 
-	return &dtoout.MindCardDTO{
+	return &dtoout.MDAddedDTO{
 		ID:          card.ID,
 		Title:       card.Title,
 		Description: card.Description,
 		Tag:         card.Tag,
-		CreatedAt:   card.CreatedAt,
-		LevelStudy:  card.LevelStudy,
-		Learned:     card.Learned,
 	}, nil
 }
 

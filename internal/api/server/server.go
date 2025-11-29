@@ -38,7 +38,7 @@ func (s *Server) Start() error {
 		r.Delete("/{id}", s.handlers.DeleteCard) // Delete card
 		r.Put("/{id}", s.handlers.UpdateCard)    // Update card
 		r.Get("/tag/{tag}", s.handlers.GetByTag) // Get by tag
-		r.Get("/", s.handlers.GetCards)          // Get all card(Default limit = 50, offset = 0) #TODO queryParams, not json body
+		r.Get("/", s.handlers.GetCards)          // Get all card, limit and offset get by QUERY
 		r.Get("/{id}", s.handlers.GetById)       // get by unic ID
 	})
 
