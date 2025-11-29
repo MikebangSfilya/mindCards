@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 )
 
 type CardCRUDService struct {
@@ -22,13 +23,31 @@ func NewCardCRUDService(repo Repo, logger *slog.Logger) *CardCRUDService {
 	}
 }
 
+func (s *CardCRUDService) AddSliceCard(ctx context.Context, cardParams []dtoin.Card) {
+
+}
+
 // Add card to DB
 func (s *CardCRUDService) AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MDAddedDTO, error) {
-	card, err := model.NewCard(cardsParams.Title, cardsParams.Description, cardsParams.Tag)
-	if err != nil {
-		s.logger.Error("failed to add card", "error", err)
-		return nil, err
-	}
+	var card *model.MindCard
+	var cardErr error
+	var wg sync.WaitGroup
+	var mu sync.RWMutex
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		mu.Lock()
+		defer mu.Unlock()
+		card, cardErr = model.NewCard(cardsParams.Title, cardsParams.Description, cardsParams.Tag)
+		if cardErr != nil {
+			s.logger.Error("failed to add card", "error", cardErr)
+			return
+		}
+	}()
+
+	wg.Wait()
+
 	if err := s.Repo.AddCard(ctx, card); err != nil {
 		s.logger.Error("failed to add card", "error", err)
 		return nil, err
