@@ -28,6 +28,7 @@ func (s *CardCRUDService) AddSliceCard(ctx context.Context, cardParams []dtoin.C
 }
 
 // Add card to DB
+// DATA Race
 func (s *CardCRUDService) AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MDAddedDTO, error) {
 
 	card, err := model.NewCard(cardsParams.Title, cardsParams.Description, cardsParams.Tag)
@@ -45,10 +46,9 @@ func (s *CardCRUDService) AddCard(ctx context.Context, cardsParams dtoin.Card) (
 		}
 	}()
 
-	s.logger.Info("adding card", "title", cardsParams.Title)
+	// s.logger.Info("adding card", "title", cardsParams.Title)
 
 	return &dtoout.MDAddedDTO{
-		ID:          card.ID,
 		Title:       card.Title,
 		Description: card.Description,
 		Tag:         card.Tag,

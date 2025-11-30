@@ -1,7 +1,5 @@
 package dtoin
 
-// type DTO interface{}
-
 // The Card is a descriptoin of mindCard DTO. Collects data to create card
 type Card struct {
 	Title       string `json:"title"`

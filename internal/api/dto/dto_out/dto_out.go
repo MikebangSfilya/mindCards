@@ -9,7 +9,6 @@ type DTOdel_out struct {
 }
 
 type MDAddedDTO struct {
-	ID          int64  `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Tag         string `json:"tag"`
