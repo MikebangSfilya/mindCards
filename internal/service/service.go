@@ -20,10 +20,10 @@ type Repo interface {
 	GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]storage.CardRow, error)
 }
 
+// general Service struct
 type Service struct {
 	Crud   *CardCRUDService
 	logger *slog.Logger
-	// RandCard RepoCard
 }
 
 func New(repo Repo, logger *slog.Logger) *Service {
@@ -31,7 +31,6 @@ func New(repo Repo, logger *slog.Logger) *Service {
 	return &Service{
 		Crud:   NewCardCRUDService(repo, serviceLogger),
 		logger: serviceLogger,
-		// RandCard: randCard,
 	}
 }
 
@@ -48,11 +47,6 @@ func (s *Service) DeleteCard(ctx context.Context, id string) error {
 // Update new description in DB
 func (s *Service) UpdateCardDescription(ctx context.Context, id string, cardsUp dtoin.Update) error {
 	return s.Crud.UpdateCardDescription(ctx, id, cardsUp)
-}
-
-// Возможно не понадобится
-func (s *Service) UpdateLvl() {
-
 }
 
 // Get list of cards
