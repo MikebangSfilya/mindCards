@@ -57,7 +57,7 @@ func (r *pgxRepository) DeleteCard(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *pgxRepository) UptadeCardDescription(ctx context.Context, id, newDesc string) error {
+func (r *pgxRepository) UpdateCardDescription(ctx context.Context, id, newDesc string) error {
 	query := `
 	UPDATE memory_cards
 	SET card_description = $1
@@ -72,7 +72,7 @@ func (r *pgxRepository) UptadeCardDescription(ctx context.Context, id, newDesc s
 
 }
 
-func (r *pgxRepository) GetCards(ctx context.Context, limit, offset int16) (map[string]model.MindCard, error) {
+func (r *pgxRepository) GetCards(ctx context.Context, limit, offset int16) ([]storage.CardRow, error) {
 	query := `
 	SELECT id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
@@ -85,9 +85,9 @@ func (r *pgxRepository) GetCards(ctx context.Context, limit, offset int16) (map[
 	}
 	defer rows.Close()
 
-	cards := make(map[string]model.MindCard)
+	cards := make([]storage.CardRow, 0)
 	for rows.Next() {
-		var card model.MindCard
+		var card storage.CardRow
 		err := rows.Scan(
 			&card.ID,
 			&card.Title,
@@ -100,7 +100,7 @@ func (r *pgxRepository) GetCards(ctx context.Context, limit, offset int16) (map[
 		if err != nil {
 			return nil, fmt.Errorf("scan failed: %w", err)
 		}
-		cards[fmt.Sprintf("%d", card.ID)] = card
+		cards = append(cards, card)
 	}
 
 	if err := rows.Err(); err != nil {

@@ -13,9 +13,9 @@ import (
 
 type Repo interface {
 	AddCard(ctx context.Context, card *model.MindCard) error
-	UptadeCardDescription(ctx context.Context, id, newDesc string) error
+	UpdateCardDescription(ctx context.Context, id, newDesc string) error
 	DeleteCard(ctx context.Context, id string) error
-	GetCards(ctx context.Context, limit, offset int16) (map[string]model.MindCard, error)
+	GetCards(ctx context.Context, limit, offset int16) ([]storage.CardRow, error)
 	GetCardById(ctx context.Context, id string) (storage.CardRow, error)
 	GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]storage.CardRow, error)
 }
@@ -50,12 +50,12 @@ func (s *Service) UpdateCardDescription(ctx context.Context, id string, cardsUp 
 }
 
 // Get list of cards
-func (s *Service) GetCards(ctx context.Context, limit, offset int16) (map[string]model.MindCard, error) {
+func (s *Service) GetCards(ctx context.Context, limit, offset int16) ([]model.MindCard, error) {
 	return s.Crud.GetCards(ctx, int16(limit), int16(offset))
 }
 
 // Get cards filtered by Tag
-func (s *Service) GetCardsByTag(ctx context.Context, tag string, limit, offset int16) (map[string]model.MindCard, error) {
+func (s *Service) GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]model.MindCard, error) {
 	return s.Crud.GetCardsByTag(ctx, tag, limit, offset)
 }
 

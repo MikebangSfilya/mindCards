@@ -8,5 +8,5 @@ type Card struct {
 }
 
 type Update struct {
-	NewDeccription string `json:"description"`
+	NewDescription string `json:"description"`
 }
