@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 )
 
 type CardCRUDService struct {
@@ -22,29 +23,46 @@ func NewCardCRUDService(repo Repo, logger *slog.Logger) *CardCRUDService {
 	}
 }
 
-// Add card to DB
-func (s *CardCRUDService) AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MindCardDTO, error) {
-	card, err := model.NewCard(cardsParams.Title, cardsParams.Description, cardsParams.Tag)
-	if err != nil {
-		s.logger.Error("failed to add card", "error", err)
-		return nil, err
-	}
-	if err := s.Repo.AddCard(ctx, card); err != nil {
-		s.logger.Error("failed to add card", "error", err)
-		return nil, err
+// Add cards to DB
+func (s *CardCRUDService) AddCards(ctx context.Context, cardParams []dtoin.Card) (*[]dtoout.MDAddedDTO, error) {
+
+	jobs := make(chan *model.MindCard, 10)
+	results := make([]dtoout.MDAddedDTO, 0, len(cardParams))
+
+	go func() {
+		defer close(jobs)
+		for _, v := range cardParams {
+
+			card, err := model.NewCard(v.Title, v.Description, v.Tag)
+			if err != nil {
+				s.logger.Error("failed to create card", "error", err)
+
+				continue
+			}
+			cardCopy := *card
+			jobs <- card
+			results = append(results, dtoout.MDAddedDTO{
+				Title:       cardCopy.Title,
+				Description: cardCopy.Description,
+				Tag:         cardCopy.Tag,
+			})
+		}
+	}()
+
+	for job := range jobs {
+		go func() {
+			dbContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := s.Repo.AddCard(dbContext, job); err != nil {
+				s.logger.Error("failed to add card", "error", err)
+
+			}
+
+			s.logger.Info("adding card", "title", job.Title)
+		}()
 	}
 
-	s.logger.Info("adding card", "title", cardsParams.Title)
-
-	return &dtoout.MindCardDTO{
-		ID:          card.ID,
-		Title:       card.Title,
-		Description: card.Description,
-		Tag:         card.Tag,
-		CreatedAt:   card.CreatedAt,
-		LevelStudy:  card.LevelStudy,
-		Learned:     card.Learned,
-	}, nil
+	return &results, nil
 }
 
 // Delete card from DB
@@ -85,9 +103,9 @@ func (s *CardCRUDService) GetCards(ctx context.Context, limit, offset int16) (ma
 }
 
 // Get cards filtered by Tag
-func (s *CardCRUDService) GetCardsByTag(ctx context.Context, tag string, pagination dtoin.LimitOffset) (map[string]model.MindCard, error) {
+func (s *CardCRUDService) GetCardsByTag(ctx context.Context, tag string, limit, offset int16) (map[string]model.MindCard, error) {
 
-	rows, err := s.Repo.GetCardsByTag(ctx, tag, pagination.Limit, pagination.Offset)
+	rows, err := s.Repo.GetCardsByTag(ctx, tag, limit, offset)
 	if err != nil {
 		return nil, err
 	}

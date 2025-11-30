@@ -20,10 +20,10 @@ type Repo interface {
 	GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]storage.CardRow, error)
 }
 
+// general Service struct
 type Service struct {
 	Crud   *CardCRUDService
 	logger *slog.Logger
-	// RandCard RepoCard
 }
 
 func New(repo Repo, logger *slog.Logger) *Service {
@@ -31,13 +31,12 @@ func New(repo Repo, logger *slog.Logger) *Service {
 	return &Service{
 		Crud:   NewCardCRUDService(repo, serviceLogger),
 		logger: serviceLogger,
-		// RandCard: randCard,
 	}
 }
 
 // Add card to DB
-func (s *Service) AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MindCardDTO, error) {
-	return s.Crud.AddCard(ctx, cardsParams)
+func (s *Service) AddCards(ctx context.Context, cardParams []dtoin.Card) (*[]dtoout.MDAddedDTO, error) {
+	return s.Crud.AddCards(ctx, cardParams)
 }
 
 // Delete card from DB
@@ -50,19 +49,14 @@ func (s *Service) UpdateCardDescription(ctx context.Context, id string, cardsUp 
 	return s.Crud.UpdateCardDescription(ctx, id, cardsUp)
 }
 
-// Возможно не понадобится
-func (s *Service) UpdateLvl() {
-
-}
-
 // Get list of cards
 func (s *Service) GetCards(ctx context.Context, limit, offset int16) (map[string]model.MindCard, error) {
 	return s.Crud.GetCards(ctx, int16(limit), int16(offset))
 }
 
 // Get cards filtered by Tag
-func (s *Service) GetCardsByTag(ctx context.Context, tag string, pagination dtoin.LimitOffset) (map[string]model.MindCard, error) {
-	return s.Crud.GetCardsByTag(ctx, tag, pagination)
+func (s *Service) GetCardsByTag(ctx context.Context, tag string, limit, offset int16) (map[string]model.MindCard, error) {
+	return s.Crud.GetCardsByTag(ctx, tag, limit, offset)
 }
 
 // Get one card by unic ID
