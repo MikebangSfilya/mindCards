@@ -26,8 +26,8 @@ type Service interface {
 	AddCards(ctx context.Context, cardParams []dtoin.Card) (*[]dtoout.MDAddedDTO, error)
 	DeleteCard(ctx context.Context, id string) error
 	UpdateCardDescription(ctx context.Context, id string, cardsUp dtoin.Update) error
-	GetCards(ctx context.Context, limit, offset int16) (map[string]model.MindCard, error)
-	GetCardsByTag(ctx context.Context, tag string, limit, offset int16) (map[string]model.MindCard, error)
+	GetCards(ctx context.Context, limit, offset int16) ([]model.MindCard, error)
+	GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]model.MindCard, error)
 	GetCardById(ctx context.Context, id string) (model.MindCard, error)
 }
 

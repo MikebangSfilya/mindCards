@@ -68,7 +68,7 @@ func (s *CardCRUDService) AddCards(ctx context.Context, cardParams []dtoin.Card)
 // Delete card from DB
 func (s *CardCRUDService) DeleteCard(ctx context.Context, id string) error {
 	if id == "" {
-		s.logger.Warn("failed to delete card", "Warn", ErrNotExist)
+		s.logger.Warn("failed to delete card", "error", ErrNotExist)
 		return ErrNotExist
 	}
 
@@ -80,11 +80,11 @@ func (s *CardCRUDService) UpdateCardDescription(ctx context.Context, id string, 
 	if id == "" {
 		return fmt.Errorf("nil id")
 	}
-	if cardsUp.NewDeccription == "" {
+	if cardsUp.NewDescription == "" {
 		return fmt.Errorf("nil desc")
 	}
 
-	if err := s.Repo.UptadeCardDescription(ctx, id, cardsUp.NewDeccription); err != nil {
+	if err := s.Repo.UpdateCardDescription(ctx, id, cardsUp.NewDescription); err != nil {
 		return err
 	}
 
@@ -98,19 +98,13 @@ func (s *CardCRUDService) UpdateLvl() {
 }
 
 // Get list of cards
-func (s *CardCRUDService) GetCards(ctx context.Context, limit, offset int16) (map[string]model.MindCard, error) {
-	return s.Repo.GetCards(ctx, limit, offset)
-}
-
-// Get cards filtered by Tag
-func (s *CardCRUDService) GetCardsByTag(ctx context.Context, tag string, limit, offset int16) (map[string]model.MindCard, error) {
-
-	rows, err := s.Repo.GetCardsByTag(ctx, tag, limit, offset)
+func (s *CardCRUDService) GetCards(ctx context.Context, limit, offset int16) ([]model.MindCard, error) {
+	rows, err := s.Repo.GetCards(ctx, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 
-	cards := make(map[string]model.MindCard)
+	cards := make([]model.MindCard, 0, len(rows))
 
 	for _, row := range rows {
 		card := model.MindCard{
@@ -122,7 +116,33 @@ func (s *CardCRUDService) GetCardsByTag(ctx context.Context, tag string, limit, 
 			LevelStudy:  row.LevelStudy,
 			Learned:     row.Learned,
 		}
-		cards[fmt.Sprintf("%d", card.ID)] = card
+		cards = append(cards, card)
+	}
+	return cards, nil
+
+}
+
+// Get cards filtered by Tag
+func (s *CardCRUDService) GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]model.MindCard, error) {
+
+	rows, err := s.Repo.GetCardsByTag(ctx, tag, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	cards := make([]model.MindCard, 0, len(rows))
+
+	for _, row := range rows {
+		card := model.MindCard{
+			ID:          row.ID,
+			Title:       row.Title,
+			Description: row.Description,
+			Tag:         row.Tag,
+			CreatedAt:   row.CreatedAt,
+			LevelStudy:  row.LevelStudy,
+			Learned:     row.Learned,
+		}
+		cards = append(cards, card)
 	}
 	return cards, nil
 }
