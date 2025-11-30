@@ -23,36 +23,46 @@ func NewCardCRUDService(repo Repo, logger *slog.Logger) *CardCRUDService {
 	}
 }
 
-func (s *CardCRUDService) AddSliceCard(ctx context.Context, cardParams []dtoin.Card) {
+// Add cards to DB
+func (s *CardCRUDService) AddCards(ctx context.Context, cardParams []dtoin.Card) (*[]dtoout.MDAddedDTO, error) {
 
-}
-
-// Add card to DB
-// DATA Race
-func (s *CardCRUDService) AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MDAddedDTO, error) {
-
-	card, err := model.NewCard(cardsParams.Title, cardsParams.Description, cardsParams.Tag)
-	if err != nil {
-		s.logger.Error("failed to add card", "error", err)
-		return nil, err
-	}
+	jobs := make(chan *model.MindCard, 10)
+	results := make([]dtoout.MDAddedDTO, 0, len(cardParams))
 
 	go func() {
-		dbCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := s.Repo.AddCard(dbCtx, card); err != nil {
-			s.logger.Error("failed to add card", "error", err)
-			return
+		defer close(jobs)
+		for _, v := range cardParams {
+
+			card, err := model.NewCard(v.Title, v.Description, v.Tag)
+			if err != nil {
+				s.logger.Error("failed to create card", "error", err)
+
+				continue
+			}
+			cardCopy := *card
+			jobs <- card
+			results = append(results, dtoout.MDAddedDTO{
+				Title:       cardCopy.Title,
+				Description: cardCopy.Description,
+				Tag:         cardCopy.Tag,
+			})
 		}
 	}()
 
-	// s.logger.Info("adding card", "title", cardsParams.Title)
+	for job := range jobs {
+		go func() {
+			dbContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := s.Repo.AddCard(dbContext, job); err != nil {
+				s.logger.Error("failed to add card", "error", err)
 
-	return &dtoout.MDAddedDTO{
-		Title:       card.Title,
-		Description: card.Description,
-		Tag:         card.Tag,
-	}, nil
+			}
+
+			s.logger.Info("adding card", "title", job.Title)
+		}()
+	}
+
+	return &results, nil
 }
 
 // Delete card from DB

@@ -36,8 +36,8 @@ func New(repo Repo, logger *slog.Logger) *Service {
 }
 
 // Add card to DB
-func (s *Service) AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MDAddedDTO, error) {
-	return s.Crud.AddCard(ctx, cardsParams)
+func (s *Service) AddCards(ctx context.Context, cardParams []dtoin.Card) (*[]dtoout.MDAddedDTO, error) {
+	return s.Crud.AddCards(ctx, cardParams)
 }
 
 // Delete card from DB

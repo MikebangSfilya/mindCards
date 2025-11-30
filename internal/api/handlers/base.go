@@ -23,7 +23,7 @@ const (
 
 // Service is an interface for connecting to the service layer
 type Service interface {
-	AddCard(ctx context.Context, cardsParams dtoin.Card) (*dtoout.MDAddedDTO, error)
+	AddCards(ctx context.Context, cardParams []dtoin.Card) (*[]dtoout.MDAddedDTO, error)
 	DeleteCard(ctx context.Context, id string) error
 	UpdateCardDescription(ctx context.Context, id string, cardsUp dtoin.Update) error
 	GetCards(ctx context.Context, limit, offset int16) (map[string]model.MindCard, error)
