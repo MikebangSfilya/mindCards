@@ -10,7 +10,3 @@ type Card struct {
 type Update struct {
 	NewDeccription string `json:"description"`
 }
-
-// type UpdateLvlLearn struct {
-// 	Level int    `json:"level"`
-// }
