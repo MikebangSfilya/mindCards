@@ -26,7 +26,7 @@ func NewCardCRUDService(repo Repo, logger *slog.Logger) *CardCRUDService {
 // Add cards to DB
 func (s *CardCRUDService) AddCards(ctx context.Context, cardParams []dtoin.Card) (*[]dtoout.MDAddedDTO, error) {
 
-	jobs := make(chan *model.MindCard, 10)
+	jobs := make(chan *model.MindCard, 50)
 	results := make([]dtoout.MDAddedDTO, 0, len(cardParams))
 
 	go func() {
@@ -39,8 +39,11 @@ func (s *CardCRUDService) AddCards(ctx context.Context, cardParams []dtoin.Card)
 
 				continue
 			}
+
 			cardCopy := *card
+
 			jobs <- card
+
 			results = append(results, dtoout.MDAddedDTO{
 				Title:       cardCopy.Title,
 				Description: cardCopy.Description,
@@ -104,20 +107,8 @@ func (s *CardCRUDService) GetCards(ctx context.Context, limit, offset int16) ([]
 		return nil, err
 	}
 
-	cards := make([]model.MindCard, 0, len(rows))
+	cards := rowsToCard(rows)
 
-	for _, row := range rows {
-		card := model.MindCard{
-			ID:          row.ID,
-			Title:       row.Title,
-			Description: row.Description,
-			Tag:         row.Tag,
-			CreatedAt:   row.CreatedAt,
-			LevelStudy:  row.LevelStudy,
-			Learned:     row.Learned,
-		}
-		cards = append(cards, card)
-	}
 	return cards, nil
 
 }
@@ -130,20 +121,7 @@ func (s *CardCRUDService) GetCardsByTag(ctx context.Context, tag string, limit, 
 		return nil, err
 	}
 
-	cards := make([]model.MindCard, 0, len(rows))
-
-	for _, row := range rows {
-		card := model.MindCard{
-			ID:          row.ID,
-			Title:       row.Title,
-			Description: row.Description,
-			Tag:         row.Tag,
-			CreatedAt:   row.CreatedAt,
-			LevelStudy:  row.LevelStudy,
-			Learned:     row.Learned,
-		}
-		cards = append(cards, card)
-	}
+	cards := rowsToCard(rows)
 	return cards, nil
 }
 
@@ -154,14 +132,5 @@ func (s *CardCRUDService) GetCardById(ctx context.Context, id string) (model.Min
 		return model.MindCard{}, err
 	}
 
-	return model.MindCard{
-		ID:          row.ID,
-		Title:       row.Title,
-		Description: row.Description,
-		Tag:         row.Tag,
-		CreatedAt:   row.CreatedAt,
-		LevelStudy:  row.LevelStudy,
-		Learned:     row.Learned,
-	}, nil
-
+	return rowToCard(row), nil
 }
