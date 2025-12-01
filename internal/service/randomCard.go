@@ -8,8 +8,7 @@ import (
 )
 
 type RepoCard interface {
-	//not real realisaion
-	GetCards(ctx context.Context, eduParams eduParams, limit, offset int16) ([]storage.CardRow, error)
+	GetCards(ctx context.Context, limit, offset int16) ([]storage.CardRow, error)
 }
 
 type CardsActiong struct {
@@ -17,15 +16,10 @@ type CardsActiong struct {
 	logger    *slog.Logger
 }
 
-type eduParams struct {
-}
-
 func (s *CardsActiong) Educated(ctx context.Context, n int, limit, offset int16) ([]model.MindCard, error) {
 
-	eduParams := eduParams{}
-
 	//take []cards from DB
-	rows, err := s.RepoCards.GetCards(ctx, eduParams, limit, offset)
+	rows, err := s.RepoCards.GetCards(ctx, limit, offset)
 	if err != nil {
 		return nil, err
 	}

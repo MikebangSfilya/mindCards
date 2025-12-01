@@ -24,6 +24,7 @@ func NewCardCRUDService(repo Repo, logger *slog.Logger) *CardCRUDService {
 }
 
 // Add cards to DB
+// TODO collect errors
 func (s *CardCRUDService) AddCards(ctx context.Context, cardParams []dtoin.Card) (*[]dtoout.MDAddedDTO, error) {
 
 	jobs := make(chan *model.MindCard, 50)
@@ -36,7 +37,6 @@ func (s *CardCRUDService) AddCards(ctx context.Context, cardParams []dtoin.Card)
 			card, err := model.NewCard(v.Title, v.Description, v.Tag)
 			if err != nil {
 				s.logger.Error("failed to create card", "error", err)
-
 				continue
 			}
 

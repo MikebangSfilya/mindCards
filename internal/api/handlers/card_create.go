@@ -17,6 +17,12 @@ func (h *Handlers) AddCards(w http.ResponseWriter, r *http.Request) {
 		h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
 		return
 	}
+	for _, v := range DTOin {
+		if err := v.Validate(); err != nil {
+			h.handleError(w, err, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
 
 	result, err := h.Service.AddCards(ctx, DTOin)
 	if err != nil {
