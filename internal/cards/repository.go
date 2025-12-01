@@ -1,7 +1,6 @@
-package repo
+package cards
 
 import (
-	"cards/internal/model"
 	"cards/internal/storage"
 	"context"
 	"fmt"
@@ -14,7 +13,7 @@ type pgxRepository struct {
 	db *pgxpool.Pool
 }
 
-func New(db *pgxpool.Pool) *pgxRepository {
+func NewPool(db *pgxpool.Pool) *pgxRepository {
 	repo := &pgxRepository{
 		db: db,
 	}
@@ -22,7 +21,7 @@ func New(db *pgxpool.Pool) *pgxRepository {
 	return repo
 }
 
-func (r *pgxRepository) AddCard(ctx context.Context, card *model.MindCard) error {
+func (r *pgxRepository) AddCard(ctx context.Context, card *MindCard) error {
 	query := `
 	INSERT INTO memory_cards 
 	(title, card_description, tag, created_at, level_study, learned)

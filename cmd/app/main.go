@@ -1,13 +1,9 @@
 package main
 
 import (
-	"cards/internal/api/handlers"
-	"cards/internal/api/server"
-	"cards/internal/configurate"
+	"cards/internal/cards"
+	"cards/internal/config"
 	database "cards/internal/db"
-
-	"cards/internal/repo"
-	"cards/internal/service"
 	"context"
 	"log"
 	"log/slog"
@@ -28,7 +24,7 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Printf(".env not found: %v", err)
 	}
-	cfg := configurate.New()
+	cfg := config.New()
 	db := database.CreateDataBase(cfg)
 	if db == nil {
 		log.Fatal("Database connection failed")
@@ -40,11 +36,11 @@ func main() {
 		Level: slog.LevelInfo,
 	}))
 
-	repo := repo.New(db)
-	service := service.New(repo, logger)
-	handle := handlers.New(service)
+	repo := cards.NewPool(db)
+	service := cards.NewService(repo, logger)
+	handle := cards.New(service)
 
-	srv := server.NewServer(handle)
+	srv := cards.NewServer(handle)
 	go func() {
 
 		log.Println(" Server starting on :8080")
