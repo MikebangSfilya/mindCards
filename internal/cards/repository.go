@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -97,16 +98,16 @@ func (r *pgxRepository) GetCards(ctx context.Context, limit, offset int16) ([]st
 			&card.Learned,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("scan failed: %w", err)
+			return nil, err
 		}
 		cards = append(cards, card)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows error: %w", err)
+		return nil, err
 	}
 
-	return cards, err
+	return cards, nil
 }
 
 func (r *pgxRepository) GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]storage.CardRow, error) {
@@ -136,7 +137,7 @@ func (r *pgxRepository) GetCardsByTag(ctx context.Context, tag string, limit, of
 			&Row.Learned,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("scan failed: %w", err)
+			return nil, err
 		}
 		cardsRow = append(cardsRow, Row)
 	}
@@ -152,6 +153,11 @@ func (r *pgxRepository) GetCardById(ctx context.Context, id string) (storage.Car
 	`
 
 	row := r.db.QueryRow(ctx, query, id)
+
+	return scanRow(row)
+}
+
+func scanRow(row pgx.Row) (storage.CardRow, error) {
 	card := storage.CardRow{}
 	err := row.Scan(
 		&card.ID,
