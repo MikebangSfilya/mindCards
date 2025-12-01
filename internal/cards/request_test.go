@@ -1,4 +1,4 @@
-package dtoin
+package cards
 
 import (
 	"testing"

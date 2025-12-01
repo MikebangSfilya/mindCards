@@ -1,7 +1,6 @@
-package service
+package cards
 
 import (
-	"cards/internal/model"
 	"cards/internal/storage"
 	"testing"
 	"time"
@@ -15,7 +14,7 @@ func TestRowToCard(t *testing.T) {
 	testCases := []struct {
 		name     string
 		row      storage.CardRow
-		expected model.MindCard
+		expected MindCard
 	}{
 		{
 			name: "normal_card",
@@ -28,7 +27,7 @@ func TestRowToCard(t *testing.T) {
 				LevelStudy:  2,
 				Learned:     false,
 			},
-			expected: model.MindCard{
+			expected: MindCard{
 				ID:          1,
 				Title:       "Go Interfaces",
 				Description: "An interface type is defined as a set of method signatures",
@@ -49,7 +48,7 @@ func TestRowToCard(t *testing.T) {
 				LevelStudy:  0,
 				Learned:     false,
 			},
-			expected: model.MindCard{
+			expected: MindCard{
 				ID:          0,
 				Title:       "",
 				Description: "",
@@ -70,7 +69,7 @@ func TestRowToCard(t *testing.T) {
 				LevelStudy:  5,
 				Learned:     true,
 			},
-			expected: model.MindCard{
+			expected: MindCard{
 				ID:          999,
 				Title:       "Max Level",
 				Description: "Already learned",
@@ -96,7 +95,7 @@ func TestRowsToCards(t *testing.T) {
 	testCases := []struct {
 		name     string
 		rows     []storage.CardRow
-		expected []model.MindCard
+		expected []MindCard
 	}{
 		{
 			name: "multiple_cards",
@@ -120,7 +119,7 @@ func TestRowsToCards(t *testing.T) {
 					Learned:     true,
 				},
 			},
-			expected: []model.MindCard{
+			expected: []MindCard{
 				{
 					ID:          1,
 					Title:       "First",
@@ -144,12 +143,12 @@ func TestRowsToCards(t *testing.T) {
 		{
 			name:     "empty_slice",
 			rows:     []storage.CardRow{},
-			expected: []model.MindCard{},
+			expected: []MindCard{},
 		},
 		{
 			name:     "nil_slice",
 			rows:     nil,
-			expected: []model.MindCard{},
+			expected: []MindCard{},
 		},
 		{
 			name: "single_card",
@@ -164,7 +163,7 @@ func TestRowsToCards(t *testing.T) {
 					Learned:     false,
 				},
 			},
-			expected: []model.MindCard{
+			expected: []MindCard{
 				{
 					ID:          42,
 					Title:       "Single",

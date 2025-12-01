@@ -1,4 +1,4 @@
-package dtoin
+package cards
 
 import (
 	"fmt"
@@ -8,7 +8,6 @@ import (
 var (
 	errEmptyDescription = fmt.Errorf("new description cant be empty")
 	errShortDescription = fmt.Errorf("description is too short")
-	errAllFieldNeeder   = fmt.Errorf("all fields cant't be empty")
 )
 
 const minDescriptionLength = 10
