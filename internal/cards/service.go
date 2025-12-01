@@ -70,7 +70,7 @@ func (s *Service) AddCards(ctx context.Context, cardParams []Card) (*[]MDAddedDT
 
 			}
 
-			// s.logger.Info("adding card", "title", job.Title)
+			s.logger.Info("adding card", "title", job.Title)
 		}()
 	}
 
