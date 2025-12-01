@@ -5,18 +5,6 @@ import (
 	"cards/internal/storage"
 )
 
-func rowsToCard(rows []storage.CardRow) []model.MindCard {
-
-	result := make([]model.MindCard, len(rows))
-
-	for i, row := range rows {
-		result[i] = rowToCard(row)
-	}
-
-	return result
-
-}
-
 func rowToCard(row storage.CardRow) model.MindCard {
 	return model.MindCard{
 		ID:          row.ID,
@@ -27,4 +15,20 @@ func rowToCard(row storage.CardRow) model.MindCard {
 		LevelStudy:  row.LevelStudy,
 		Learned:     row.Learned,
 	}
+}
+
+func rowsToCards(rows []storage.CardRow) []model.MindCard {
+
+	if rows == nil {
+		return []model.MindCard{}
+	}
+
+	result := make([]model.MindCard, len(rows))
+
+	for i, row := range rows {
+		result[i] = rowToCard(row)
+	}
+
+	return result
+
 }

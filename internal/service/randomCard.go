@@ -31,7 +31,7 @@ func (s *CardsActiong) Educated(ctx context.Context, n int, limit, offset int16)
 	}
 
 	//take []cards from rows
-	result := rowsToCard(rows)
+	result := rowsToCards(rows)
 
 	return result, nil
 }

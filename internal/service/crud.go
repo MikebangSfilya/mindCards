@@ -107,7 +107,7 @@ func (s *CardCRUDService) GetCards(ctx context.Context, limit, offset int16) ([]
 		return nil, err
 	}
 
-	cards := rowsToCard(rows)
+	cards := rowsToCards(rows)
 
 	return cards, nil
 
@@ -121,7 +121,7 @@ func (s *CardCRUDService) GetCardsByTag(ctx context.Context, tag string, limit, 
 		return nil, err
 	}
 
-	cards := rowsToCard(rows)
+	cards := rowsToCards(rows)
 	return cards, nil
 }
 
