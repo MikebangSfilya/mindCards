@@ -22,6 +22,7 @@ const (
 	ErrAddCard    = "failed to add card"
 	ErrDeleteCard = "failed to delete card"
 	ErrUpdateCard = "failed to update card"
+	ErrValidate   = "wrong params"
 )
 
 // ServiceRepo is an interface for connecting to the service layer
@@ -57,7 +58,7 @@ func (h *Handlers) AddCards(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, v := range DTOin {
 		if err := v.Validate(); err != nil {
-			h.handleError(w, err, err.Error(), http.StatusBadRequest)
+			h.handleError(w, err, ErrValidate, http.StatusBadRequest)
 			return
 		}
 	}
@@ -103,7 +104,7 @@ func (h *Handlers) GetCards(w http.ResponseWriter, r *http.Request) {
 
 	cards, err := h.Service.GetCards(ctx, p.limit, p.offset)
 	if err != nil {
-		h.handleError(w, err, "failed to get cards", http.StatusInternalServerError)
+		h.handleError(w, err, errFailToAdd.Error(), http.StatusInternalServerError)
 		return
 	}
 	slog.Info("Get cards succeful")
@@ -127,13 +128,13 @@ func (h *Handlers) GetByTag(w http.ResponseWriter, r *http.Request) {
 
 	p, err := h.limitOffset(limitStr, offsetStr)
 	if err != nil {
-		h.handleError(w, err, err.Error(), http.StatusBadRequest)
+		h.handleError(w, err, ErrValidate, http.StatusBadRequest)
 	}
 
 	cards, err := h.Service.GetCardsByTag(ctx, tag, p.limit, p.offset)
 
 	if err != nil {
-		h.handleError(w, err, "failed to get cards", http.StatusInternalServerError)
+		h.handleError(w, err, errFailToAdd.Error(), http.StatusInternalServerError)
 		return
 	}
 
