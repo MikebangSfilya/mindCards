@@ -168,8 +168,15 @@ func (h *Handlers) GetById(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (h *Handlers) GetEducation(w http.ResponseWriter, r *http.Request) {
-
+func (h *Handlers) RegistredRoutes(r chi.Router) {
+	r.Route("/card", func(r chi.Router) {
+		r.Post("/", h.AddCards)         //add card
+		r.Delete("/{id}", h.DeleteCard) // Delete card
+		r.Put("/{id}", h.UpdateCard)    // Update card
+		r.Get("/tag/{tag}", h.GetByTag) // Get by tag
+		r.Get("/", h.GetCards)          // Get all card, limit and offset get by QUERY
+		r.Get("/{id}", h.GetById)       // get by unic ID
+	})
 }
 
 func (h *Handlers) UpdateCard(w http.ResponseWriter, r *http.Request) {

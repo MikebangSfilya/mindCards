@@ -7,11 +7,13 @@ import (
 	"context"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
 )
 
@@ -36,15 +38,22 @@ func main() {
 		Level: slog.LevelInfo,
 	}))
 
+	router := chi.NewRouter()
+
 	repo := cards.NewPool(db)
 	service := cards.NewService(repo, logger)
 	handle := cards.New(service)
 
-	srv := cards.NewServer(handle)
+	handle.RegistredRoutes(router)
+
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: router,
+	}
 	go func() {
 
 		log.Println(" Server starting on :8080")
-		if err := srv.Start(); err != nil {
+		if err := srv.ListenAndServe(); err != nil {
 			slog.Warn(
 				"Server start failed or shutdown",
 				"server error", err)
