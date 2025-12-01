@@ -2,7 +2,6 @@ package dtoout
 
 import (
 	"encoding/json"
-	"log"
 	"time"
 )
 
@@ -21,7 +20,6 @@ func NewErr(err error) ErrDto {
 func (e *ErrDto) ToString() string {
 	b, err := json.Marshal(e)
 	if err != nil {
-		log.Fatal(err)
 		return ""
 	}
 	return string(b)

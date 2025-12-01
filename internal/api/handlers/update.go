@@ -21,8 +21,14 @@ func (h *Handlers) UpdateCard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := dtoUp.Validate(); err != nil {
+		h.handleError(w, err, "validate error", http.StatusBadRequest)
+		return
+	}
+
 	if err := h.Service.UpdateCardDescription(ctx, upId, dtoUp); err != nil {
 		h.handleError(w, err, ErrUpdateCard, http.StatusBadRequest)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
