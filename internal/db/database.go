@@ -1,7 +1,7 @@
 package database
 
 import (
-	"cards/internal/configurate"
+	"cards/internal/config"
 	"context"
 	"fmt"
 	"log/slog"
@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func CreateDataBase(cfg configurate.Config) *pgxpool.Pool {
+func CreateDataBase(cfg config.Config) *pgxpool.Pool {
 
 	// connStr := "postgres://test:test@localhost:5434/testdb?sslmode=disable"
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",

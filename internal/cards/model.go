@@ -1,7 +1,8 @@
-package model
+package cards
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -18,7 +19,18 @@ type MindCard struct {
 }
 
 func NewCard(title, description, tag string) (*MindCard, error) {
-	if title == "" || description == "" || tag == "" {
+
+	trimmed := struct {
+		title       string
+		description string
+		tag         string
+	}{
+		title:       strings.TrimSpace(title),
+		description: strings.TrimSpace(description),
+		tag:         strings.TrimSpace(tag),
+	}
+
+	if trimmed.title == "" || trimmed.description == "" || trimmed.tag == "" {
 		return nil, errAllFieldNeeder
 	}
 	return &MindCard{

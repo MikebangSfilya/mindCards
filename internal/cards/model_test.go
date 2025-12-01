@@ -1,4 +1,4 @@
-package model
+package cards
 
 import (
 	"testing"
@@ -48,6 +48,48 @@ func TestNewModel(t *testing.T) {
 			description: "Test description in test case",
 			tag:         "",
 			wantErr:     true,
+		},
+		{
+			name:        "space title",
+			title:       "          ",
+			description: "Test description in test case",
+			tag:         "#Test",
+			wantErr:     true,
+		},
+		{
+			name:        "space description",
+			title:       "title",
+			description: "                  ",
+			tag:         "#Test",
+			wantErr:     true,
+		},
+		{
+			name:        "space tag",
+			title:       "title",
+			description: "Test description in test case",
+			tag:         "            ",
+			wantErr:     true,
+		},
+		{
+			name:        "space valid title",
+			title:       "    not nill title      ",
+			description: "Test description in test case",
+			tag:         "#Test",
+			wantErr:     false,
+		},
+		{
+			name:        "space valid description",
+			title:       "title",
+			description: "           Test description in test case       ",
+			tag:         "#Test",
+			wantErr:     false,
+		},
+		{
+			name:        "space valid tag",
+			title:       "title",
+			description: "Test description in test case",
+			tag:         "      tagg      ",
+			wantErr:     false,
 		},
 	}
 

@@ -1,22 +1,21 @@
-package handlers
+package cards
 
 import (
 	"bytes"
-	dtoin "cards/internal/api/dto/dto_in"
 	"encoding/json"
 	"net/http"
 	"testing"
 )
 
 func TestDecoder(t *testing.T) {
-	dto := dtoin.Card{
+	dto := Card{
 		Title:       "title",
 		Description: "Desc",
 		Tag:         "Go",
 	}
 	testCase, _ := json.Marshal(dto)
 	req, _ := http.NewRequest("POST", "/", bytes.NewReader(testCase))
-	dtoIn := dtoin.Card{}
+	dtoIn := Card{}
 	err := decoder(req, &dtoIn)
 	if err != nil {
 		t.Errorf("decoder failed %v", err)

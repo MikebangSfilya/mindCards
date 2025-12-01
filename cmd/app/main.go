@@ -1,21 +1,19 @@
 package main
 
 import (
-	"cards/internal/api/handlers"
-	"cards/internal/api/server"
-	"cards/internal/configurate"
+	"cards/internal/cards"
+	"cards/internal/config"
 	database "cards/internal/db"
-
-	"cards/internal/repo"
-	"cards/internal/service"
 	"context"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
 )
 
@@ -28,7 +26,7 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Printf(".env not found: %v", err)
 	}
-	cfg := configurate.New()
+	cfg := config.New()
 	db := database.CreateDataBase(cfg)
 	if db == nil {
 		log.Fatal("Database connection failed")
@@ -40,15 +38,22 @@ func main() {
 		Level: slog.LevelInfo,
 	}))
 
-	repo := repo.New(db)
-	service := service.New(repo, logger)
-	handle := handlers.New(service)
+	router := chi.NewRouter()
 
-	srv := server.NewServer(handle)
+	repo := cards.NewPool(db)
+	service := cards.NewService(repo, logger)
+	handle := cards.New(service)
+
+	handle.RegistredRoutes(router)
+
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: router,
+	}
 	go func() {
 
 		log.Println(" Server starting on :8080")
-		if err := srv.Start(); err != nil {
+		if err := srv.ListenAndServe(); err != nil {
 			slog.Warn(
 				"Server start failed or shutdown",
 				"server error", err)

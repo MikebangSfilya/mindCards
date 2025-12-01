@@ -1,6 +1,9 @@
-package dtoout
+package cards
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type DTOdel_out struct {
 	Status  string    `json:"Status"`
@@ -20,4 +23,24 @@ func NewDelDTO(obj string) DTOdel_out {
 		Object:  obj,
 		TimeDel: time.Now(),
 	}
+}
+
+type ErrDto struct {
+	Err  string
+	Time time.Time
+}
+
+func NewErr(err error) ErrDto {
+	return ErrDto{
+		Err:  err.Error(),
+		Time: time.Now(),
+	}
+}
+
+func (e *ErrDto) ToString() string {
+	b, err := json.Marshal(e)
+	if err != nil {
+		return ""
+	}
+	return string(b)
 }
