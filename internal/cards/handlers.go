@@ -16,6 +16,7 @@ const (
 	addCardTimeOut = time.Duration(60 * time.Second)
 )
 
+// msg errors
 const (
 	ErrDecodeJSON = "failed to decode JSON"
 	ErrEncodeJSON = "failed to encode response"
@@ -35,46 +36,23 @@ type ServiceRepo interface {
 	GetCardById(ctx context.Context, id string) (MindCard, error)
 }
 
-// Handlers stores the service layer dependency
-type Handlers struct {
+type pagination struct {
+	limit  int16
+	offset int16
+}
+
+// Handler stores the service layer dependency
+type Handler struct {
 	Service ServiceRepo
 }
 
-func New(service ServiceRepo) *Handlers {
-	return &Handlers{
+func New(service ServiceRepo) *Handler {
+	return &Handler{
 		Service: service,
 	}
 }
 
-// func (h *Handlers) AddCards(w http.ResponseWriter, r *http.Request) {
-
-// 	ctx, cancel := context.WithTimeout(r.Context(), addCardTimeOut)
-// 	defer cancel()
-
-// 	var DTOin []Card
-// 	if err := decoder(r, &DTOin); err != nil {
-// 		h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
-// 		return
-// 	}
-// 	for _, v := range DTOin {
-// 		if err := v.Validate(); err != nil {
-// 			h.handleError(w, err, ErrValidate, http.StatusBadRequest)
-// 			return
-// 		}
-// 	}
-
-// 	result, err := h.Service.AddCards(ctx, DTOin)
-// 	if err != nil {
-// 		h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	if err := encoder(w, result); err != nil {
-// 		h.handleError(w, err, ErrEncodeJSON, http.StatusBadRequest)
-// 	}
-// }
-
-func NewAddCard() http.HandlerFunc {
+func (h *Handler) AddCards() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		ctx, cancel := context.WithTimeout(r.Context(), addCardTimeOut)
@@ -101,143 +79,149 @@ func NewAddCard() http.HandlerFunc {
 		if err := encoder(w, result); err != nil {
 			h.handleError(w, err, ErrEncodeJSON, http.StatusBadRequest)
 		}
+
 	}
 }
 
-func (h *Handlers) DeleteCard(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
-	defer cancel()
+func (h *Handler) DeleteCard() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
+		defer cancel()
 
-	delId := chi.URLParam(r, "id")
+		delId := chi.URLParam(r, "id")
 
-	if err := h.Service.DeleteCard(ctx, delId); err != nil {
-		h.handleError(w, err, ErrDeleteCard, http.StatusBadRequest)
-		return
-	}
+		if err := h.Service.DeleteCard(ctx, delId); err != nil {
+			h.handleError(w, err, ErrDeleteCard, http.StatusBadRequest)
+			return
+		}
 
-	w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusNoContent)
 
-}
-
-func (h *Handlers) GetCards(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
-	defer cancel()
-
-	limitStr := r.URL.Query().Get("limit")
-	offsetStr := r.URL.Query().Get("offset")
-
-	p, err := h.limitOffset(limitStr, offsetStr)
-	if err != nil {
-		h.handleError(w, err, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	cards, err := h.Service.GetCards(ctx, p.limit, p.offset)
-	if err != nil {
-		h.handleError(w, err, errFailToAdd.Error(), http.StatusInternalServerError)
-		return
-	}
-	slog.Info("Get cards succeful")
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := encoder(w, cards); err != nil {
-		h.handleError(w, err, ErrEncodeJSON, http.StatusBadRequest)
-		return
 	}
 }
 
-func (h *Handlers) GetByTag(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetCards() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
+		defer cancel()
 
-	ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
-	defer cancel()
+		limitStr := r.URL.Query().Get("limit")
+		offsetStr := r.URL.Query().Get("offset")
 
-	tag := chi.URLParam(r, "tag")
+		p, err := h.limitOffset(limitStr, offsetStr)
+		if err != nil {
+			h.handleError(w, err, err.Error(), http.StatusBadRequest)
+			return
+		}
 
-	limitStr := r.URL.Query().Get("limit")
-	offsetStr := r.URL.Query().Get("offset")
+		cards, err := h.Service.GetCards(ctx, p.limit, p.offset)
+		if err != nil {
+			h.handleError(w, err, errFailToAdd.Error(), http.StatusInternalServerError)
+			return
+		}
+		slog.Info("Get cards succeful")
 
-	p, err := h.limitOffset(limitStr, offsetStr)
-	if err != nil {
-		h.handleError(w, err, ErrValidate, http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		if err := encoder(w, cards); err != nil {
+			h.handleError(w, err, ErrEncodeJSON, http.StatusBadRequest)
+			return
+		}
 	}
-
-	cards, err := h.Service.GetCardsByTag(ctx, tag, p.limit, p.offset)
-
-	if err != nil {
-		h.handleError(w, err, errFailToAdd.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	if err := encoder(w, cards); err != nil {
-		h.handleError(w, err, ErrEncodeJSON, http.StatusInternalServerError)
-		return
-	}
-
 }
 
-func (h *Handlers) GetById(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetByTag() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 
-	ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
-	defer cancel()
+		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
+		defer cancel()
 
-	id := chi.URLParam(r, "id")
+		tag := chi.URLParam(r, "tag")
 
-	card, err := h.Service.GetCardById(ctx, id)
-	if err != nil {
-		h.handleError(w, err, "failed to get cards", http.StatusInternalServerError)
-		return
+		limitStr := r.URL.Query().Get("limit")
+		offsetStr := r.URL.Query().Get("offset")
+
+		p, err := h.limitOffset(limitStr, offsetStr)
+		if err != nil {
+			h.handleError(w, err, ErrValidate, http.StatusBadRequest)
+		}
+
+		cards, err := h.Service.GetCardsByTag(ctx, tag, p.limit, p.offset)
+
+		if err != nil {
+			h.handleError(w, err, errFailToAdd.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		if err := encoder(w, cards); err != nil {
+			h.handleError(w, err, ErrEncodeJSON, http.StatusInternalServerError)
+			return
+		}
+
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	if err := encoder(w, card); err != nil {
-		h.handleError(w, err, ErrEncodeJSON, http.StatusInternalServerError)
-		return
-	}
-
 }
 
-func (h *Handlers) RegistredRoutes(r chi.Router) {
+func (h *Handler) GetById() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
+		defer cancel()
+
+		id := chi.URLParam(r, "id")
+
+		card, err := h.Service.GetCardById(ctx, id)
+		if err != nil {
+			h.handleError(w, err, "failed to get cards", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		if err := encoder(w, card); err != nil {
+			h.handleError(w, err, ErrEncodeJSON, http.StatusInternalServerError)
+			return
+		}
+
+	}
+}
+
+func (h *Handler) UpdateCard() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
+		defer cancel()
+
+		upId := chi.URLParam(r, "id")
+
+		dtoUp := Update{}
+		if err := decoder(r, &dtoUp); err != nil {
+			h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
+			return
+		}
+
+		if err := dtoUp.Validate(); err != nil {
+			h.handleError(w, err, "validate error", http.StatusBadRequest)
+			return
+		}
+
+		if err := h.Service.UpdateCardDescription(ctx, upId, dtoUp); err != nil {
+			h.handleError(w, err, ErrUpdateCard, http.StatusBadRequest)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func (h *Handler) RegistredRoutes(r chi.Router) {
 	r.Route("/card", func(r chi.Router) {
-		r.Post("/", h.AddCards)         //add card
-		r.Delete("/{id}", h.DeleteCard) // Delete card
-		r.Put("/{id}", h.UpdateCard)    // Update card
-		r.Get("/tag/{tag}", h.GetByTag) // Get by tag
-		r.Get("/", h.GetCards)          // Get all card, limit and offset get by QUERY
-		r.Get("/{id}", h.GetById)       // get by unic ID
+		r.Post("/", h.AddCards())         //add card
+		r.Delete("/{id}", h.DeleteCard()) // Delete card
+		r.Put("/{id}", h.UpdateCard())    // Update card
+		r.Get("/tag/{tag}", h.GetByTag()) // Get by tag
+		r.Get("/", h.GetCards())          // Get all card, limit and offset get by QUERY
+		r.Get("/{id}", h.GetById())       // get by unic ID
 	})
-}
-
-func (h *Handlers) UpdateCard(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
-	defer cancel()
-
-	upId := chi.URLParam(r, "id")
-
-	dtoUp := Update{}
-	if err := decoder(r, &dtoUp); err != nil {
-		h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
-		return
-	}
-
-	if err := dtoUp.Validate(); err != nil {
-		h.handleError(w, err, "validate error", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.Service.UpdateCardDescription(ctx, upId, dtoUp); err != nil {
-		h.handleError(w, err, ErrUpdateCard, http.StatusBadRequest)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
-type pagination struct {
-	limit  int16
-	offset int16
 }
 
 // help func for decode json
@@ -251,14 +235,14 @@ func encoder(w http.ResponseWriter, resp any) error {
 }
 
 // help func responce error DTO
-func (h *Handlers) handleError(w http.ResponseWriter, err error, msg string, code int) {
+func (h *Handler) handleError(w http.ResponseWriter, err error, msg string, code int) {
 	slog.Error(msg, "err", err, "package", "handlers")
 	errDTO := NewErr(err)
 	http.Error(w, errDTO.ToString(), code)
 }
 
 // help func to convert str to int
-func (h *Handlers) stringToInt(in string) (int, error) {
+func (h *Handler) stringToInt(in string) (int, error) {
 	if in == "" {
 		return 0, nil
 	}
@@ -267,7 +251,7 @@ func (h *Handlers) stringToInt(in string) (int, error) {
 }
 
 // helper to set default pagination variables
-func (h *Handlers) limitOffset(limitStr, offsetStr string) (pagination, error) {
+func (h *Handler) limitOffset(limitStr, offsetStr string) (pagination, error) {
 
 	limit, err := h.stringToInt(limitStr)
 	if err != nil {
