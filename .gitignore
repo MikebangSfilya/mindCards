@@ -5,5 +5,5 @@ Makefile
 app
 coverage.out
 *.html
-*yaml
+*.yaml
 todo.md
