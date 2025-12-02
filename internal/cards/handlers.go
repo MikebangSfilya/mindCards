@@ -41,18 +41,18 @@ type pagination struct {
 	offset int16
 }
 
-// Handlers stores the service layer dependency
-type Handlers struct {
+// Handler stores the service layer dependency
+type Handler struct {
 	Service ServiceRepo
 }
 
-func New(service ServiceRepo) *Handlers {
-	return &Handlers{
+func New(service ServiceRepo) *Handler {
+	return &Handler{
 		Service: service,
 	}
 }
 
-func (h *Handlers) AddCards() http.HandlerFunc {
+func (h *Handler) AddCards() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		ctx, cancel := context.WithTimeout(r.Context(), addCardTimeOut)
@@ -83,7 +83,7 @@ func (h *Handlers) AddCards() http.HandlerFunc {
 	}
 }
 
-func (h *Handlers) DeleteCard() http.HandlerFunc {
+func (h *Handler) DeleteCard() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
 		defer cancel()
@@ -100,7 +100,7 @@ func (h *Handlers) DeleteCard() http.HandlerFunc {
 	}
 }
 
-func (h *Handlers) GetCards() http.HandlerFunc {
+func (h *Handler) GetCards() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
 		defer cancel()
@@ -129,7 +129,7 @@ func (h *Handlers) GetCards() http.HandlerFunc {
 	}
 }
 
-func (h *Handlers) GetByTag() http.HandlerFunc {
+func (h *Handler) GetByTag() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
@@ -162,7 +162,7 @@ func (h *Handlers) GetByTag() http.HandlerFunc {
 	}
 }
 
-func (h *Handlers) GetById() http.HandlerFunc {
+func (h *Handler) GetById() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
@@ -186,7 +186,7 @@ func (h *Handlers) GetById() http.HandlerFunc {
 	}
 }
 
-func (h *Handlers) UpdateCard() http.HandlerFunc {
+func (h *Handler) UpdateCard() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
 		defer cancel()
@@ -213,7 +213,7 @@ func (h *Handlers) UpdateCard() http.HandlerFunc {
 	}
 }
 
-func (h *Handlers) RegistredRoutes(r chi.Router) {
+func (h *Handler) RegistredRoutes(r chi.Router) {
 	r.Route("/card", func(r chi.Router) {
 		r.Post("/", h.AddCards())         //add card
 		r.Delete("/{id}", h.DeleteCard()) // Delete card
@@ -235,14 +235,14 @@ func encoder(w http.ResponseWriter, resp any) error {
 }
 
 // help func responce error DTO
-func (h *Handlers) handleError(w http.ResponseWriter, err error, msg string, code int) {
+func (h *Handler) handleError(w http.ResponseWriter, err error, msg string, code int) {
 	slog.Error(msg, "err", err, "package", "handlers")
 	errDTO := NewErr(err)
 	http.Error(w, errDTO.ToString(), code)
 }
 
 // help func to convert str to int
-func (h *Handlers) stringToInt(in string) (int, error) {
+func (h *Handler) stringToInt(in string) (int, error) {
 	if in == "" {
 		return 0, nil
 	}
@@ -251,7 +251,7 @@ func (h *Handlers) stringToInt(in string) (int, error) {
 }
 
 // helper to set default pagination variables
-func (h *Handlers) limitOffset(limitStr, offsetStr string) (pagination, error) {
+func (h *Handler) limitOffset(limitStr, offsetStr string) (pagination, error) {
 
 	limit, err := h.stringToInt(limitStr)
 	if err != nil {
