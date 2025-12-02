@@ -7,3 +7,4 @@ app
 coverage.out
 
 *.html
+*yaml

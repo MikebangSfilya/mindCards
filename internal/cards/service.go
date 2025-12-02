@@ -1,11 +1,12 @@
 package cards
 
 import (
-	"cards/internal/storage"
 	"context"
 	"fmt"
 	"log/slog"
 	"time"
+
+	"github.com/MikebangSfilya/mindCards/internal/storage"
 )
 
 // интерфейс для связи с репозиторий

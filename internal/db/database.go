@@ -1,10 +1,11 @@
 package database
 
 import (
-	"cards/internal/config"
 	"context"
 	"fmt"
 	"log/slog"
+
+	"github.com/MikebangSfilya/mindCards/internal/config"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

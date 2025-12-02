@@ -1,9 +1,10 @@
 package cards
 
 import (
-	"cards/internal/storage"
 	"testing"
 	"time"
+
+	"github.com/MikebangSfilya/mindCards/internal/storage"
 
 	"github.com/stretchr/testify/require"
 )
