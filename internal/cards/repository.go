@@ -25,47 +25,46 @@ func NewPool(db *pgxpool.Pool) *pgxRepository {
 
 func (r *pgxRepository) AddCard(ctx context.Context, card *MindCard) error {
 	query := `
-	INSERT INTO memory_cards 
-	(title, card_description, tag, created_at, level_study, learned)
-	VALUES ($1, $2, $3, $4, $5, $6)
-	RETURNING id
-	`
+	  INSERT INTO memory_cards 
+    (user_id, title, card_description, tag, created_at, level_study, learned)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING card_id
+    `
 
 	card.Tag = strings.ToLower(card.Tag)
 
-	err := r.db.QueryRow(ctx, query, card.Title, card.Description, card.Tag, card.CreatedAt, card.LevelStudy, card.Learned).Scan(&card.ID)
+	err := r.db.QueryRow(ctx, query, card.UserID, card.Title, card.Description, card.Tag, card.CreatedAt, card.LevelStudy, card.Learned).Scan(&card.ID)
 	if err != nil {
 		return fmt.Errorf("SQL error: %w", err)
 	}
 	return nil
 }
 
-func (r *pgxRepository) DeleteCard(ctx context.Context, id string) error {
+func (r *pgxRepository) DeleteCard(ctx context.Context, card_id, user_id string) error {
 	query := `
-	DELETE 
-	FROM memory_cards 
-	WHERE id = $1
-	`
+    DELETE FROM memory_cards 
+    WHERE card_id = $1 AND user_id = $2
+    `
 
-	result, err := r.db.Exec(ctx, query, id)
+	result, err := r.db.Exec(ctx, query, card_id, user_id)
 	if err != nil {
 		return err
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("card with title '%s' not found", id)
+		return fmt.Errorf("card with title '%s' not found", card_id)
 	}
 	return nil
 }
 
-func (r *pgxRepository) UpdateCardDescription(ctx context.Context, id, newDesc string) error {
+func (r *pgxRepository) UpdateCardDescription(ctx context.Context, card_id, user_id, newDesc string) error {
 	query := `
 	UPDATE memory_cards
 	SET card_description = $1
-	WHERE id = $2
+	WHERE card_id = $2 AND user_id = $3
 	`
 
-	_, err := r.db.Exec(ctx, query, newDesc, id)
+	_, err := r.db.Exec(ctx, query, newDesc, card_id, user_id)
 	if err != nil {
 		return err
 	}
@@ -73,14 +72,15 @@ func (r *pgxRepository) UpdateCardDescription(ctx context.Context, id, newDesc s
 
 }
 
-func (r *pgxRepository) GetCards(ctx context.Context, limit, offset int16) ([]storage.CardRow, error) {
+func (r *pgxRepository) GetCards(ctx context.Context, limit, offset int16, user_id string) ([]storage.CardRow, error) {
 	query := `
-	SELECT id, title, card_description, tag, created_at, level_study, learned
+	SELECT card_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
 	LIMIT $1 OFFSET $2
+	WHERE user_id = $3
 	`
 
-	rows, err := r.db.Query(ctx, query, limit, offset)
+	rows, err := r.db.Query(ctx, query, limit, offset, user_id)
 	if err != nil {
 		return nil, err
 	}

@@ -13,9 +13,9 @@ import (
 
 type Repo interface {
 	AddCard(ctx context.Context, card *MindCard) error
-	UpdateCardDescription(ctx context.Context, id, newDesc string) error
-	DeleteCard(ctx context.Context, id string) error
-	GetCards(ctx context.Context, limit, offset int16) ([]storage.CardRow, error)
+	UpdateCardDescription(ctx context.Context, cardId, userId, newDesc string) error
+	DeleteCard(ctx context.Context, cardId, userId string) error
+	GetCards(ctx context.Context, limit, offset int16, userId string) ([]storage.CardRow, error)
 	GetCardById(ctx context.Context, id string) (storage.CardRow, error)
 	GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]storage.CardRow, error)
 }
@@ -35,7 +35,7 @@ func NewService(repo Repo, logger *slog.Logger) *Service {
 }
 
 // Add cards to DB
-// TODO collect errors
+// TODO: collect errors
 func (s *Service) AddCards(ctx context.Context, cardParams []Card) (*[]MDAddedDTO, error) {
 
 	jobs := make(chan *MindCard, 50)
@@ -79,25 +79,25 @@ func (s *Service) AddCards(ctx context.Context, cardParams []Card) (*[]MDAddedDT
 }
 
 // Delete card from DB
-func (s *Service) DeleteCard(ctx context.Context, id string) error {
-	if id == "" {
+func (s *Service) DeleteCard(ctx context.Context, cardId, userId string) error {
+	if cardId == "" {
 		s.logger.Warn("failed to delete card", "error", ErrNotExist)
 		return ErrNotExist
 	}
 
-	return s.Repo.DeleteCard(ctx, id)
+	return s.Repo.DeleteCard(ctx, cardId, userId)
 }
 
 // Update new description in DB
-func (s *Service) UpdateCardDescription(ctx context.Context, id string, cardsUp Update) error {
-	if id == "" {
+func (s *Service) UpdateCardDescription(ctx context.Context, cardId, UserID string, cardsUp Update) error {
+	if cardId == "" {
 		return fmt.Errorf("nil id")
 	}
 	if cardsUp.NewDescription == "" {
 		return fmt.Errorf("nil desc")
 	}
 
-	if err := s.Repo.UpdateCardDescription(ctx, id, cardsUp.NewDescription); err != nil {
+	if err := s.Repo.UpdateCardDescription(ctx, cardId, UserID, cardsUp.NewDescription); err != nil {
 		return err
 	}
 
@@ -111,8 +111,8 @@ func (s *Service) UpdateLvl() {
 }
 
 // Get list of cards
-func (s *Service) GetCards(ctx context.Context, limit, offset int16) ([]MindCard, error) {
-	rows, err := s.Repo.GetCards(ctx, limit, offset)
+func (s *Service) GetCards(ctx context.Context, limit, offset int16, userId string) ([]MindCard, error) {
+	rows, err := s.Repo.GetCards(ctx, limit, offset, userId)
 	if err != nil {
 		return nil, err
 	}

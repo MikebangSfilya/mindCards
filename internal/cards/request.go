@@ -14,6 +14,7 @@ const minDescriptionLength = 10
 
 // The Card is a descriptoin of mindCard DTO. Collects data to create card
 type Card struct {
+	UserID      int
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Tag         string `json:"tag"`
