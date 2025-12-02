@@ -28,16 +28,6 @@ type ConfigDB struct {
 	DBName string `yaml:"DB_NAME"`
 }
 
-func NewDB() ConfigDB {
-	return ConfigDB{
-		DBHost: os.Getenv("DB_HOST"),
-		DBPort: os.Getenv("DB_PORT"),
-		DBUSer: os.Getenv("DB_USER"),
-		DBPass: os.Getenv("DB_PASSWORD"),
-		DBName: os.Getenv("DB_NAME"),
-	}
-}
-
 func MustLoad() Config {
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {
@@ -53,10 +43,4 @@ func MustLoad() Config {
 		log.Fatalf("cannot read config: %s", err)
 	}
 	return cfg
-}
-
-func (c ConfigDB) Get() []string {
-	envParams := make([]string, 0)
-	envParams = append(envParams, c.DBHost, c.DBPort, c.DBUSer, c.DBPass, c.DBName)
-	return envParams
 }

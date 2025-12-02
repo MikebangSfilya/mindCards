@@ -46,61 +46,31 @@ func New(service ServiceRepo) *Handlers {
 	}
 }
 
-// func (h *Handlers) AddCards(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) AddCards(w http.ResponseWriter, r *http.Request) {
 
-// 	ctx, cancel := context.WithTimeout(r.Context(), addCardTimeOut)
-// 	defer cancel()
+	ctx, cancel := context.WithTimeout(r.Context(), addCardTimeOut)
+	defer cancel()
 
-// 	var DTOin []Card
-// 	if err := decoder(r, &DTOin); err != nil {
-// 		h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
-// 		return
-// 	}
-// 	for _, v := range DTOin {
-// 		if err := v.Validate(); err != nil {
-// 			h.handleError(w, err, ErrValidate, http.StatusBadRequest)
-// 			return
-// 		}
-// 	}
-
-// 	result, err := h.Service.AddCards(ctx, DTOin)
-// 	if err != nil {
-// 		h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	if err := encoder(w, result); err != nil {
-// 		h.handleError(w, err, ErrEncodeJSON, http.StatusBadRequest)
-// 	}
-// }
-
-func NewAddCard() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		ctx, cancel := context.WithTimeout(r.Context(), addCardTimeOut)
-		defer cancel()
-
-		var DTOin []Card
-		if err := decoder(r, &DTOin); err != nil {
-			h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
+	var DTOin []Card
+	if err := decoder(r, &DTOin); err != nil {
+		h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
+		return
+	}
+	for _, v := range DTOin {
+		if err := v.Validate(); err != nil {
+			h.handleError(w, err, ErrValidate, http.StatusBadRequest)
 			return
 		}
-		for _, v := range DTOin {
-			if err := v.Validate(); err != nil {
-				h.handleError(w, err, ErrValidate, http.StatusBadRequest)
-				return
-			}
-		}
+	}
 
-		result, err := h.Service.AddCards(ctx, DTOin)
-		if err != nil {
-			h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
-			return
-		}
+	result, err := h.Service.AddCards(ctx, DTOin)
+	if err != nil {
+		h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
+		return
+	}
 
-		if err := encoder(w, result); err != nil {
-			h.handleError(w, err, ErrEncodeJSON, http.StatusBadRequest)
-		}
+	if err := encoder(w, result); err != nil {
+		h.handleError(w, err, ErrEncodeJSON, http.StatusBadRequest)
 	}
 }
 
