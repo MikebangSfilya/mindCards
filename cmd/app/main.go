@@ -1,9 +1,6 @@
 package main
 
 import (
-	"cards/internal/cards"
-	"cards/internal/config"
-	database "cards/internal/db"
 	"context"
 	"log"
 	"log/slog"
@@ -12,6 +9,10 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/MikebangSfilya/mindCards/internal/cards"
+	"github.com/MikebangSfilya/mindCards/internal/config"
+	database "github.com/MikebangSfilya/mindCards/internal/db"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -27,7 +28,9 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Printf(".env not found: %v", err)
 	}
-	cfg := config.New()
+
+	cfg := config.MustLoad()
+
 	db := database.CreateDataBase(cfg)
 	if db == nil {
 		log.Fatal("Database connection failed")
@@ -50,12 +53,15 @@ func main() {
 	handle.RegistredRoutes(router)
 
 	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: router,
+		Addr:         cfg.Adress,
+		Handler:      router,
+		ReadTimeout:  cfg.HTTTPServer.Timeout,
+		WriteTimeout: cfg.HTTTPServer.Timeout,
+		IdleTimeout:  cfg.HTTTPServer.IdleTimeout,
 	}
 	go func() {
 
-		log.Println(" Server starting on :8080")
+		log.Println(" Server starting")
 		if err := srv.ListenAndServe(); err != nil {
 			slog.Warn(
 				"Server start failed or shutdown",

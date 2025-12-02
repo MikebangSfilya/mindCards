@@ -1,10 +1,11 @@
 package cards
 
 import (
-	"cards/internal/storage"
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/MikebangSfilya/mindCards/internal/storage"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
