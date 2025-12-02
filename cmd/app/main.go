@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 )
 
@@ -39,6 +40,8 @@ func main() {
 	}))
 
 	router := chi.NewRouter()
+
+	router.Use(middleware.Logger)
 
 	repo := cards.NewPool(db)
 	service := cards.NewService(repo, logger)

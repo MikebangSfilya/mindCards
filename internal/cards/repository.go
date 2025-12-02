@@ -85,25 +85,8 @@ func (r *pgxRepository) GetCards(ctx context.Context, limit, offset int16) ([]st
 	}
 	defer rows.Close()
 
-	cards := make([]storage.CardRow, 0)
-	for rows.Next() {
-		var card storage.CardRow
-		err := rows.Scan(
-			&card.ID,
-			&card.Title,
-			&card.Description,
-			&card.Tag,
-			&card.CreatedAt,
-			&card.LevelStudy,
-			&card.Learned,
-		)
-		if err != nil {
-			return nil, err
-		}
-		cards = append(cards, card)
-	}
-
-	if err := rows.Err(); err != nil {
+	cards, err := scanRows(rows)
+	if err != nil {
 		return nil, err
 	}
 
@@ -124,25 +107,12 @@ func (r *pgxRepository) GetCardsByTag(ctx context.Context, tag string, limit, of
 	}
 	defer rows.Close()
 
-	var cardsRow []storage.CardRow
-	for rows.Next() {
-		var Row storage.CardRow
-		err := rows.Scan(
-			&Row.ID,
-			&Row.Title,
-			&Row.Description,
-			&Row.Tag,
-			&Row.CreatedAt,
-			&Row.LevelStudy,
-			&Row.Learned,
-		)
-		if err != nil {
-			return nil, err
-		}
-		cardsRow = append(cardsRow, Row)
+	cards, err := scanRows(rows)
+	if err != nil {
+		return nil, err
 	}
 
-	return cardsRow, rows.Err()
+	return cards, nil
 }
 
 func (r *pgxRepository) GetCardById(ctx context.Context, id string) (storage.CardRow, error) {
@@ -173,4 +143,26 @@ func scanRow(row pgx.Row) (storage.CardRow, error) {
 	}
 
 	return card, nil
+}
+
+func scanRows(rows pgx.Rows) ([]storage.CardRow, error) {
+	var cardsRow []storage.CardRow
+	for rows.Next() {
+		var Row storage.CardRow
+		err := rows.Scan(
+			&Row.ID,
+			&Row.Title,
+			&Row.Description,
+			&Row.Tag,
+			&Row.CreatedAt,
+			&Row.LevelStudy,
+			&Row.Learned,
+		)
+		if err != nil {
+			return nil, err
+		}
+		cardsRow = append(cardsRow, Row)
+	}
+
+	return cardsRow, rows.Err()
 }
