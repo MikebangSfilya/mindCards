@@ -1,11 +1,11 @@
 .env
 *.yml
-*.sql
+
 sort
 Makefile
 app
 coverage.out
-
+*.sql
 *.html
 *yaml
 todo.md
