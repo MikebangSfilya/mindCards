@@ -3,7 +3,8 @@ package storage
 import "time"
 
 type CardRow struct {
-	ID          int64
+	CardID      int64
+	UserID      int64
 	Title       string
 	Description string
 	Tag         string

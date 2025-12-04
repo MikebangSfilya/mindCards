@@ -11,7 +11,7 @@ import (
 // интерфейс для связи с репозиторий
 
 type Repo interface {
-	AddCard(ctx context.Context, card *MindCard) error
+	AddCard(ctx context.Context, userId int, card *MindCard) error
 	UpdateCardDescription(ctx context.Context, cardId, userId int, newDesc string) error
 	DeleteCard(ctx context.Context, cardId, userId int) error
 	GetCards(ctx context.Context, userId int, limit, offset int16) ([]storage.CardRow, error)
@@ -35,7 +35,7 @@ func NewService(repo Repo, logger *slog.Logger) *Service {
 
 // Add cards to DB
 // TODO: collect errors
-func (s *Service) AddCards(ctx context.Context, cardParams []Card) (*[]MDAddedDTO, error) {
+func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (*[]MDAddedDTO, error) {
 
 	jobs := make(chan *MindCard, 50)
 	results := make([]MDAddedDTO, 0, len(cardParams))
@@ -43,11 +43,7 @@ func (s *Service) AddCards(ctx context.Context, cardParams []Card) (*[]MDAddedDT
 	go func() {
 		defer close(jobs)
 		for _, v := range cardParams {
-			card, err := NewCard(v.Title, v.Description, v.Tag)
-			if err != nil {
-				s.logger.Error("failed to create card", "error", err)
-				continue
-			}
+			card := NewCard(v.Title, v.Description, v.Tag)
 
 			cardCopy := *card
 
@@ -65,7 +61,7 @@ func (s *Service) AddCards(ctx context.Context, cardParams []Card) (*[]MDAddedDT
 		go func() {
 			dbContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			if err := s.Repo.AddCard(dbContext, job); err != nil {
+			if err := s.Repo.AddCard(dbContext, userId, job); err != nil {
 				s.logger.Error("failed to add card", "error", err)
 
 			}
@@ -135,7 +131,8 @@ func (s *Service) GetCardById(ctx context.Context, cardId int) (MindCard, error)
 
 func rowToCard(row storage.CardRow) MindCard {
 	return MindCard{
-		ID:          row.ID,
+		CardID:      row.CardID,
+		UserID:      row.UserID,
 		Title:       row.Title,
 		Description: row.Description,
 		Tag:         row.Tag,
