@@ -135,7 +135,8 @@ func (s *Service) GetCardById(ctx context.Context, cardId int) (MindCard, error)
 
 func rowToCard(row storage.CardRow) MindCard {
 	return MindCard{
-		ID:          row.ID,
+		CardID:      row.CardID,
+		UserID:      row.UserID,
 		Title:       row.Title,
 		Description: row.Description,
 		Tag:         row.Tag,

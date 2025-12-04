@@ -33,7 +33,7 @@ func (r *cardRepository) AddCard(ctx context.Context, userId int, card *MindCard
 
 	card.Tag = strings.ToLower(card.Tag)
 
-	err := r.db.QueryRow(ctx, query, userId, card.Title, card.Description, card.Tag, card.CreatedAt, card.LevelStudy, card.Learned).Scan(&card.ID)
+	err := r.db.QueryRow(ctx, query, userId, card.Title, card.Description, card.Tag, card.CreatedAt, card.LevelStudy, card.Learned).Scan(&card.CardID)
 	if err != nil {
 		return fmt.Errorf("SQL error: %w", err)
 	}
@@ -74,14 +74,14 @@ func (r *cardRepository) UpdateCardDescription(ctx context.Context, cardId, user
 
 func (r *cardRepository) GetCards(ctx context.Context, userId int, limit, offset int16) ([]storage.CardRow, error) {
 	query := `
-	SELECT card_id, title, card_description, tag, created_at, level_study, learned
+	SELECT card_id, user_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
-	WHERE user_id = $3
-	LIMIT $1 OFFSET $2
+	WHERE user_id = $1
+	LIMIT $2 OFFSET $3
 	
 	`
 
-	rows, err := r.db.Query(ctx, query, limit, offset, userId)
+	rows, err := r.db.Query(ctx, query, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,8 @@ func (r *cardRepository) GetCardById(ctx context.Context, id int) (storage.CardR
 func scanRow(row pgx.Row) (storage.CardRow, error) {
 	card := storage.CardRow{}
 	err := row.Scan(
-		&card.ID,
+		&card.CardID,
+		&card.UserID,
 		&card.Title,
 		&card.Description,
 		&card.Tag,
@@ -152,7 +153,8 @@ func scanRows(rows pgx.Rows) ([]storage.CardRow, error) {
 	for rows.Next() {
 		var Row storage.CardRow
 		err := rows.Scan(
-			&Row.ID,
+			&Row.CardID,
+			&Row.UserID,
 			&Row.Title,
 			&Row.Description,
 			&Row.Tag,
