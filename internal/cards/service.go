@@ -2,7 +2,6 @@ package cards
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -13,11 +12,11 @@ import (
 
 type Repo interface {
 	AddCard(ctx context.Context, card *MindCard) error
-	UpdateCardDescription(ctx context.Context, cardId, userId, newDesc string) error
-	DeleteCard(ctx context.Context, cardId, userId string) error
-	GetCards(ctx context.Context, limit, offset int16, userId string) ([]storage.CardRow, error)
-	GetCardById(ctx context.Context, id string) (storage.CardRow, error)
-	GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]storage.CardRow, error)
+	UpdateCardDescription(ctx context.Context, cardId, userId int, newDesc string) error
+	DeleteCard(ctx context.Context, cardId, userId int) error
+	GetCards(ctx context.Context, userId int, limit, offset int16) ([]storage.CardRow, error)
+	GetCardById(ctx context.Context, cardId int) (storage.CardRow, error)
+	GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]storage.CardRow, error)
 }
 
 // general Service struct
@@ -79,23 +78,12 @@ func (s *Service) AddCards(ctx context.Context, cardParams []Card) (*[]MDAddedDT
 }
 
 // Delete card from DB
-func (s *Service) DeleteCard(ctx context.Context, cardId, userId string) error {
-	if cardId == "" {
-		s.logger.Warn("failed to delete card", "error", ErrNotExist)
-		return ErrNotExist
-	}
-
+func (s *Service) DeleteCard(ctx context.Context, cardId, userId int) error {
 	return s.Repo.DeleteCard(ctx, cardId, userId)
 }
 
 // Update new description in DB
-func (s *Service) UpdateCardDescription(ctx context.Context, cardId, UserID string, cardsUp Update) error {
-	if cardId == "" {
-		return fmt.Errorf("nil id")
-	}
-	if cardsUp.NewDescription == "" {
-		return fmt.Errorf("nil desc")
-	}
+func (s *Service) UpdateCardDescription(ctx context.Context, cardId, UserID int, cardsUp Update) error {
 
 	if err := s.Repo.UpdateCardDescription(ctx, cardId, UserID, cardsUp.NewDescription); err != nil {
 		return err
@@ -111,8 +99,8 @@ func (s *Service) UpdateLvl() {
 }
 
 // Get list of cards
-func (s *Service) GetCards(ctx context.Context, limit, offset int16, userId string) ([]MindCard, error) {
-	rows, err := s.Repo.GetCards(ctx, limit, offset, userId)
+func (s *Service) GetCards(ctx context.Context, userId int, limit, offset int16) ([]MindCard, error) {
+	rows, err := s.Repo.GetCards(ctx, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -124,9 +112,9 @@ func (s *Service) GetCards(ctx context.Context, limit, offset int16, userId stri
 }
 
 // Get cards filtered by Tag
-func (s *Service) GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]MindCard, error) {
+func (s *Service) GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]MindCard, error) {
 
-	rows, err := s.Repo.GetCardsByTag(ctx, tag, limit, offset)
+	rows, err := s.Repo.GetCardsByTag(ctx, tag, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -136,8 +124,8 @@ func (s *Service) GetCardsByTag(ctx context.Context, tag string, limit, offset i
 }
 
 // Get one card by unic ID
-func (s *Service) GetCardById(ctx context.Context, id string) (MindCard, error) {
-	row, err := s.Repo.GetCardById(ctx, id)
+func (s *Service) GetCardById(ctx context.Context, cardId int) (MindCard, error) {
+	row, err := s.Repo.GetCardById(ctx, cardId)
 	if err != nil {
 		return MindCard{}, err
 	}

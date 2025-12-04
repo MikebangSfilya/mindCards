@@ -29,11 +29,11 @@ const (
 // ServiceRepo is an interface for connecting to the service layer
 type ServiceRepo interface {
 	AddCards(ctx context.Context, cardParams []Card) (*[]MDAddedDTO, error)
-	DeleteCard(ctx context.Context, cardId, userId string) error
-	UpdateCardDescription(ctx context.Context, cardId, userId string, cardsUp Update) error
-	GetCards(ctx context.Context, limit, offset int16, userId string) ([]MindCard, error)
-	GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]MindCard, error)
-	GetCardById(ctx context.Context, id string) (MindCard, error)
+	DeleteCard(ctx context.Context, cardId, userId int) error
+	UpdateCardDescription(ctx context.Context, cardId, userId int, cardsUp Update) error
+	GetCards(ctx context.Context, userId int, limit, offset int16) ([]MindCard, error)
+	GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]MindCard, error)
+	GetCardById(ctx context.Context, id int) (MindCard, error)
 }
 
 type pagination struct {
@@ -89,9 +89,13 @@ func (h *Handler) DeleteCard() http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
 		defer cancel()
 
-		delId := chi.URLParam(r, "id")
-
-		usId := "1"
+		delIdstr := chi.URLParam(r, "id")
+		delId, err := strconv.Atoi(delIdstr)
+		if err != nil {
+			h.handleError(w, err, err.Error(), http.StatusBadRequest)
+			return
+		}
+		usId := 1
 
 		if err := decoder(r, &usId); err != nil {
 			h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
@@ -122,13 +126,13 @@ func (h *Handler) GetCards() http.HandlerFunc {
 			return
 		}
 
-		usId := "1"
+		usId := 1
 
 		if err := decoder(r, &usId); err != nil {
 			h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
 		}
 
-		cards, err := h.Service.GetCards(ctx, p.limit, p.offset, usId)
+		cards, err := h.Service.GetCards(ctx, usId, p.limit, p.offset)
 		if err != nil {
 			h.handleError(w, err, errFailToAdd.Error(), http.StatusInternalServerError)
 			return
@@ -146,6 +150,8 @@ func (h *Handler) GetCards() http.HandlerFunc {
 func (h *Handler) GetByTag() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		usId := 1
+
 		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
 		defer cancel()
 
@@ -159,7 +165,7 @@ func (h *Handler) GetByTag() http.HandlerFunc {
 			h.handleError(w, err, ErrValidate, http.StatusBadRequest)
 		}
 
-		cards, err := h.Service.GetCardsByTag(ctx, tag, p.limit, p.offset)
+		cards, err := h.Service.GetCardsByTag(ctx, tag, usId, p.limit, p.offset)
 
 		if err != nil {
 			h.handleError(w, err, errFailToAdd.Error(), http.StatusInternalServerError)
@@ -183,7 +189,12 @@ func (h *Handler) GetById() http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
 		defer cancel()
 
-		id := chi.URLParam(r, "id")
+		idStr := chi.URLParam(r, "id")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			h.handleError(w, err, err.Error(), http.StatusBadRequest)
+			return
+		}
 
 		card, err := h.Service.GetCardById(ctx, id)
 		if err != nil {
@@ -206,9 +217,14 @@ func (h *Handler) UpdateCard() http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
 		defer cancel()
 
-		upId := chi.URLParam(r, "id")
+		upIdStr := chi.URLParam(r, "id")
 
-		usId := "1"
+		usId := 1
+		upId, err := strconv.Atoi(upIdStr)
+		if err != nil {
+			h.handleError(w, err, err.Error(), http.StatusBadRequest)
+			return
+		}
 
 		if err := decoder(r, &usId); err != nil {
 			h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)

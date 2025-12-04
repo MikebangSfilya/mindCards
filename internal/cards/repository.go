@@ -40,31 +40,31 @@ func (r *pgxRepository) AddCard(ctx context.Context, card *MindCard) error {
 	return nil
 }
 
-func (r *pgxRepository) DeleteCard(ctx context.Context, card_id, user_id string) error {
+func (r *pgxRepository) DeleteCard(ctx context.Context, cardId, userId int) error {
 	query := `
     DELETE FROM memory_cards 
     WHERE card_id = $1 AND user_id = $2
     `
 
-	result, err := r.db.Exec(ctx, query, card_id, user_id)
+	result, err := r.db.Exec(ctx, query, cardId, userId)
 	if err != nil {
 		return err
 	}
 
 	if result.RowsAffected() == 0 {
-		return fmt.Errorf("card with title '%s' not found", card_id)
+		return fmt.Errorf("card with title '%v' not found", cardId)
 	}
 	return nil
 }
 
-func (r *pgxRepository) UpdateCardDescription(ctx context.Context, card_id, user_id, newDesc string) error {
+func (r *pgxRepository) UpdateCardDescription(ctx context.Context, cardId, userId int, newDesc string) error {
 	query := `
 	UPDATE memory_cards
 	SET card_description = $1
 	WHERE card_id = $2 AND user_id = $3
 	`
 
-	_, err := r.db.Exec(ctx, query, newDesc, card_id, user_id)
+	_, err := r.db.Exec(ctx, query, newDesc, cardId, userId)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func (r *pgxRepository) UpdateCardDescription(ctx context.Context, card_id, user
 
 }
 
-func (r *pgxRepository) GetCards(ctx context.Context, limit, offset int16, user_id string) ([]storage.CardRow, error) {
+func (r *pgxRepository) GetCards(ctx context.Context, userId int, limit, offset int16) ([]storage.CardRow, error) {
 	query := `
 	SELECT card_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
@@ -80,7 +80,7 @@ func (r *pgxRepository) GetCards(ctx context.Context, limit, offset int16, user_
 	WHERE user_id = $3
 	`
 
-	rows, err := r.db.Query(ctx, query, limit, offset, user_id)
+	rows, err := r.db.Query(ctx, query, limit, offset, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -94,15 +94,15 @@ func (r *pgxRepository) GetCards(ctx context.Context, limit, offset int16, user_
 	return cards, nil
 }
 
-func (r *pgxRepository) GetCardsByTag(ctx context.Context, tag string, limit, offset int16) ([]storage.CardRow, error) {
+func (r *pgxRepository) GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]storage.CardRow, error) {
 	query := `
 	SELECT id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
-	WHERE tag = $1
-	LIMIT $2 OFFSET $3
+	WHERE tag = $1 AND user_id = $2
+	LIMIT $3 OFFSET $4
 	`
 
-	rows, err := r.db.Query(ctx, query, tag, limit, offset)
+	rows, err := r.db.Query(ctx, query, tag, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (r *pgxRepository) GetCardsByTag(ctx context.Context, tag string, limit, of
 	return cards, nil
 }
 
-func (r *pgxRepository) GetCardById(ctx context.Context, id string) (storage.CardRow, error) {
+func (r *pgxRepository) GetCardById(ctx context.Context, id int) (storage.CardRow, error) {
 	query := `
 	SELECT *
 	FROM memory_cards
