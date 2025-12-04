@@ -1,10 +1,8 @@
 .env
-*.yml
-*.yaml
-*.sql
 sort
 Makefile
 app
 coverage.out
-
 *.html
+config.yaml
+todo.md

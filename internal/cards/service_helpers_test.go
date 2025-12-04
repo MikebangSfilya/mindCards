@@ -1,9 +1,10 @@
 package cards
 
 import (
-	"cards/internal/storage"
 	"testing"
 	"time"
+
+	"github.com/MikebangSfilya/mindCards/internal/storage"
 
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,8 @@ func TestRowToCard(t *testing.T) {
 		{
 			name: "normal_card",
 			row: storage.CardRow{
-				ID:          1,
+				CardID:      1,
+				UserID:      10,
 				Title:       "Go Interfaces",
 				Description: "An interface type is defined as a set of method signatures",
 				Tag:         "golang",
@@ -28,7 +30,8 @@ func TestRowToCard(t *testing.T) {
 				Learned:     false,
 			},
 			expected: MindCard{
-				ID:          1,
+				CardID:      1,
+				UserID:      10,
 				Title:       "Go Interfaces",
 				Description: "An interface type is defined as a set of method signatures",
 				Tag:         "golang",
@@ -40,7 +43,8 @@ func TestRowToCard(t *testing.T) {
 		{
 			name: "zero_values",
 			row: storage.CardRow{
-				ID:          0,
+				CardID:      0,
+				UserID:      10,
 				Title:       "",
 				Description: "",
 				Tag:         "",
@@ -49,7 +53,8 @@ func TestRowToCard(t *testing.T) {
 				Learned:     false,
 			},
 			expected: MindCard{
-				ID:          0,
+				CardID:      0,
+				UserID:      10,
 				Title:       "",
 				Description: "",
 				Tag:         "",
@@ -61,7 +66,7 @@ func TestRowToCard(t *testing.T) {
 		{
 			name: "learned_card",
 			row: storage.CardRow{
-				ID:          999,
+				CardID:      999,
 				Title:       "Max Level",
 				Description: "Already learned",
 				Tag:         "done",
@@ -70,7 +75,7 @@ func TestRowToCard(t *testing.T) {
 				Learned:     true,
 			},
 			expected: MindCard{
-				ID:          999,
+				CardID:      999,
 				Title:       "Max Level",
 				Description: "Already learned",
 				Tag:         "done",
@@ -101,7 +106,7 @@ func TestRowsToCards(t *testing.T) {
 			name: "multiple_cards",
 			rows: []storage.CardRow{
 				{
-					ID:          1,
+					CardID:      1,
 					Title:       "First",
 					Description: "Desc 1",
 					Tag:         "tag1",
@@ -110,7 +115,7 @@ func TestRowsToCards(t *testing.T) {
 					Learned:     false,
 				},
 				{
-					ID:          2,
+					CardID:      2,
 					Title:       "Second",
 					Description: "Desc 2",
 					Tag:         "tag2",
@@ -121,7 +126,7 @@ func TestRowsToCards(t *testing.T) {
 			},
 			expected: []MindCard{
 				{
-					ID:          1,
+					CardID:      1,
 					Title:       "First",
 					Description: "Desc 1",
 					Tag:         "tag1",
@@ -130,7 +135,7 @@ func TestRowsToCards(t *testing.T) {
 					Learned:     false,
 				},
 				{
-					ID:          2,
+					CardID:      2,
 					Title:       "Second",
 					Description: "Desc 2",
 					Tag:         "tag2",
@@ -154,7 +159,7 @@ func TestRowsToCards(t *testing.T) {
 			name: "single_card",
 			rows: []storage.CardRow{
 				{
-					ID:          42,
+					CardID:      42,
 					Title:       "Single",
 					Description: "Just one",
 					Tag:         "alone",
@@ -165,7 +170,7 @@ func TestRowsToCards(t *testing.T) {
 			},
 			expected: []MindCard{
 				{
-					ID:          42,
+					CardID:      42,
 					Title:       "Single",
 					Description: "Just one",
 					Tag:         "alone",

@@ -1,9 +1,6 @@
 package main
 
 import (
-	"cards/internal/cards"
-	"cards/internal/config"
-	database "cards/internal/db"
 	"context"
 	"log"
 	"log/slog"
@@ -13,7 +10,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/MikebangSfilya/mindCards/internal/cards"
+	"github.com/MikebangSfilya/mindCards/internal/config"
+	database "github.com/MikebangSfilya/mindCards/internal/db"
+	"github.com/MikebangSfilya/mindCards/internal/users"
+
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 )
 
@@ -26,7 +29,9 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Printf(".env not found: %v", err)
 	}
-	cfg := config.New()
+
+	cfg := config.MustLoad()
+
 	db := database.CreateDataBase(cfg)
 	if db == nil {
 		log.Fatal("Database connection failed")
@@ -40,19 +45,29 @@ func main() {
 
 	router := chi.NewRouter()
 
-	repo := cards.NewPool(db)
-	service := cards.NewService(repo, logger)
-	handle := cards.New(service)
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
 
-	handle.RegistredRoutes(router)
+	cardsRepo := cards.NewCardPool(db)
+	userRepo := users.NewUserPool(db)
+
+	cardsService := cards.NewService(cardsRepo, logger)
+	cardsHandler := cards.New(cardsService)
+
+	//registrated handlers
+	cardsHandler.RegistredRoutes(router)
+	router.Post("/user", users.SaveUser(userRepo))
 
 	srv := &http.Server{
-		Addr:    ":8080",
-		Handler: router,
+		Addr:         cfg.Adress,
+		Handler:      router,
+		ReadTimeout:  cfg.HTTTPServer.Timeout,
+		WriteTimeout: cfg.HTTTPServer.Timeout,
+		IdleTimeout:  cfg.HTTTPServer.IdleTimeout,
 	}
 	go func() {
 
-		log.Println(" Server starting on :8080")
+		log.Println(" Server starting")
 		if err := srv.ListenAndServe(); err != nil {
 			slog.Warn(
 				"Server start failed or shutdown",

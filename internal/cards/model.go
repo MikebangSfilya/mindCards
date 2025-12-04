@@ -2,37 +2,23 @@ package cards
 
 import (
 	"fmt"
-	"strings"
 	"time"
 )
 
 var errAllFieldNeeder = fmt.Errorf("all fields are required")
 
 type MindCard struct {
-	ID          int64     `json:"id" db:"id"`
-	Title       string    `json:"title" db:"title"`
-	Description string    `json:"description" db:"card_description"`
-	Tag         string    `json:"tag" db:"tag"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	LevelStudy  int8      `json:"level_study" db:"level_study"`
-	Learned     bool      `json:"learned" db:"learned"`
+	CardID      int64     `json:"card_id"`
+	UserID      int64     `json:"user_id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Tag         string    `json:"tag"`
+	CreatedAt   time.Time `json:"created_at"`
+	LevelStudy  int8      `json:"level_study"`
+	Learned     bool      `json:"learned"`
 }
 
-func NewCard(title, description, tag string) (*MindCard, error) {
-
-	trimmed := struct {
-		title       string
-		description string
-		tag         string
-	}{
-		title:       strings.TrimSpace(title),
-		description: strings.TrimSpace(description),
-		tag:         strings.TrimSpace(tag),
-	}
-
-	if trimmed.title == "" || trimmed.description == "" || trimmed.tag == "" {
-		return nil, errAllFieldNeeder
-	}
+func NewCard(title, description, tag string) *MindCard {
 	return &MindCard{
 		Title:       title,
 		Description: description,
@@ -40,6 +26,6 @@ func NewCard(title, description, tag string) (*MindCard, error) {
 		CreatedAt:   time.Now(),
 		LevelStudy:  0,
 		Learned:     false,
-	}, nil
+	}
 
 }
