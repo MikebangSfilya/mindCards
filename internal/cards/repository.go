@@ -23,7 +23,7 @@ func NewCardPool(db *pgxpool.Pool) *cardRepository {
 	return repo
 }
 
-func (r *cardRepository) AddCard(ctx context.Context, card *MindCard) error {
+func (r *cardRepository) AddCard(ctx context.Context, userId int, card *MindCard) error {
 	query := `
 	INSERT INTO memory_cards 
     (user_id, title, card_description, tag, created_at, level_study, learned)
@@ -33,7 +33,7 @@ func (r *cardRepository) AddCard(ctx context.Context, card *MindCard) error {
 
 	card.Tag = strings.ToLower(card.Tag)
 
-	err := r.db.QueryRow(ctx, query, card.UserID, card.Title, card.Description, card.Tag, card.CreatedAt, card.LevelStudy, card.Learned).Scan(&card.ID)
+	err := r.db.QueryRow(ctx, query, userId, card.Title, card.Description, card.Tag, card.CreatedAt, card.LevelStudy, card.Learned).Scan(&card.ID)
 	if err != nil {
 		return fmt.Errorf("SQL error: %w", err)
 	}

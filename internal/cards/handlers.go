@@ -28,7 +28,7 @@ const (
 
 // ServiceRepo is an interface for connecting to the service layer
 type ServiceRepo interface {
-	AddCards(ctx context.Context, cardParams []Card) (*[]MDAddedDTO, error)
+	AddCards(ctx context.Context, userId int, cardParams []Card) (*[]MDAddedDTO, error)
 	DeleteCard(ctx context.Context, cardId, userId int) error
 	UpdateCardDescription(ctx context.Context, cardId, userId int, cardsUp Update) error
 	GetCards(ctx context.Context, userId int, limit, offset int16) ([]MindCard, error)
@@ -58,19 +58,25 @@ func (h *Handler) AddCards() http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), addCardTimeOut)
 		defer cancel()
 
-		var DTOin []Card
-		if err := decoder(r, &DTOin); err != nil {
+		usId, err := h.getUserIDFromContext(ctx)
+		if err != nil {
+			h.handleError(w, err, "authentication required", http.StatusUnauthorized)
+			return
+		}
+
+		var CardIn []Card
+		if err := decoder(r, &CardIn); err != nil {
 			h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
 			return
 		}
-		for _, v := range DTOin {
+		for _, v := range CardIn {
 			if err := v.Validate(); err != nil {
 				h.handleError(w, err, ErrValidate, http.StatusBadRequest)
 				return
 			}
 		}
 
-		result, err := h.Service.AddCards(ctx, DTOin)
+		result, err := h.Service.AddCards(ctx, usId, CardIn)
 		if err != nil {
 			h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
 			return
@@ -95,7 +101,12 @@ func (h *Handler) DeleteCard() http.HandlerFunc {
 			h.handleError(w, err, err.Error(), http.StatusBadRequest)
 			return
 		}
-		usId := 1
+
+		usId, err := h.getUserIDFromContext(ctx)
+		if err != nil {
+			h.handleError(w, err, "authentication required", http.StatusUnauthorized)
+			return
+		}
 
 		if err := h.Service.DeleteCard(ctx, delId, usId); err != nil {
 			h.handleError(w, err, ErrDeleteCard, http.StatusBadRequest)
@@ -122,7 +133,11 @@ func (h *Handler) GetCards() http.HandlerFunc {
 			return
 		}
 
-		usId := 1
+		usId, err := h.getUserIDFromContext(ctx)
+		if err != nil {
+			h.handleError(w, err, "authentication required", http.StatusUnauthorized)
+			return
+		}
 
 		cards, err := h.Service.GetCards(ctx, usId, p.limit, p.offset)
 		if err != nil {
@@ -142,10 +157,14 @@ func (h *Handler) GetCards() http.HandlerFunc {
 func (h *Handler) GetByTag() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		usId := 1
-
 		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
 		defer cancel()
+
+		usId, err := h.getUserIDFromContext(ctx)
+		if err != nil {
+			h.handleError(w, err, "authentication required", http.StatusUnauthorized)
+			return
+		}
 
 		tag := chi.URLParam(r, "tag")
 
@@ -211,7 +230,12 @@ func (h *Handler) UpdateCard() http.HandlerFunc {
 
 		upIdStr := chi.URLParam(r, "id")
 
-		usId := 1
+		usId, err := h.getUserIDFromContext(ctx)
+		if err != nil {
+			h.handleError(w, err, "authentication required", http.StatusUnauthorized)
+			return
+		}
+
 		upId, err := strconv.Atoi(upIdStr)
 		if err != nil {
 			h.handleError(w, err, err.Error(), http.StatusBadRequest)
@@ -312,4 +336,14 @@ func (h *Handler) limitOffset(limitStr, offsetStr string) (pagination, error) {
 	}
 
 	return p, nil
+}
+
+// dummy method
+func (h *Handler) getUserIDFromContext(ctx context.Context) (int, error) {
+	userID, ok := ctx.Value("user_id").(int)
+	if !ok {
+		// TODO: Delete this after real Authenticate realisation
+		return 1, nil
+	}
+	return userID, nil
 }
