@@ -13,6 +13,7 @@ import (
 	"github.com/MikebangSfilya/mindCards/internal/cards"
 	"github.com/MikebangSfilya/mindCards/internal/config"
 	database "github.com/MikebangSfilya/mindCards/internal/db"
+	"github.com/MikebangSfilya/mindCards/internal/users"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -45,12 +46,17 @@ func main() {
 	router := chi.NewRouter()
 
 	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
 
-	repo := cards.NewPool(db)
-	service := cards.NewService(repo, logger)
-	handle := cards.New(service)
+	cardsRepo := cards.NewCardPool(db)
+	userRepo := users.NewUserPool(db)
 
-	handle.RegistredRoutes(router)
+	cardsService := cards.NewService(cardsRepo, logger)
+	cardsHandler := cards.New(cardsService)
+
+	//registrated handlers
+	cardsHandler.RegistredRoutes(router)
+	router.Post("/user", users.SaveUser(userRepo))
 
 	srv := &http.Server{
 		Addr:         cfg.Adress,

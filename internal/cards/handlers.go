@@ -97,10 +97,6 @@ func (h *Handler) DeleteCard() http.HandlerFunc {
 		}
 		usId := 1
 
-		if err := decoder(r, &usId); err != nil {
-			h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
-		}
-
 		if err := h.Service.DeleteCard(ctx, delId, usId); err != nil {
 			h.handleError(w, err, ErrDeleteCard, http.StatusBadRequest)
 			return
@@ -127,10 +123,6 @@ func (h *Handler) GetCards() http.HandlerFunc {
 		}
 
 		usId := 1
-
-		if err := decoder(r, &usId); err != nil {
-			h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
-		}
 
 		cards, err := h.Service.GetCards(ctx, usId, p.limit, p.offset)
 		if err != nil {
@@ -278,14 +270,27 @@ func (h *Handler) handleError(w http.ResponseWriter, err error, msg string, code
 	http.Error(w, errDTO.ToString(), code)
 }
 
+func strToI(s string) (int16, error) {
+	if s == "" {
+		return 0, nil
+	}
+
+	out, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, err
+	}
+
+	return int16(out), nil
+}
+
 // helper to set default pagination variables
 func (h *Handler) limitOffset(limitStr, offsetStr string) (pagination, error) {
 
-	limit, err := strconv.Atoi(limitStr)
+	limit, err := strToI(limitStr)
 	if err != nil {
 		return pagination{}, err
 	}
-	offset, err := strconv.Atoi(offsetStr)
+	offset, err := strToI(offsetStr)
 	if err != nil {
 
 		return pagination{}, err
