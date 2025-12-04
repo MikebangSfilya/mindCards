@@ -278,23 +278,14 @@ func (h *Handler) handleError(w http.ResponseWriter, err error, msg string, code
 	http.Error(w, errDTO.ToString(), code)
 }
 
-// help func to convert str to int
-func (h *Handler) stringToInt(in string) (int, error) {
-	if in == "" {
-		return 0, nil
-	}
-
-	return strconv.Atoi(in)
-}
-
 // helper to set default pagination variables
 func (h *Handler) limitOffset(limitStr, offsetStr string) (pagination, error) {
 
-	limit, err := h.stringToInt(limitStr)
+	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
 		return pagination{}, err
 	}
-	offset, err := h.stringToInt(offsetStr)
+	offset, err := strconv.Atoi(offsetStr)
 	if err != nil {
 
 		return pagination{}, err
