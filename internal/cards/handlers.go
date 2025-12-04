@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/MikebangSfilya/mindCards/internal/auth"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -58,7 +59,7 @@ func (h *Handler) AddCards() http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), addCardTimeOut)
 		defer cancel()
 
-		usId, err := h.getUserIDFromContext(ctx)
+		usId, err := auth.GetUserID(ctx)
 		if err != nil {
 			h.handleError(w, err, "authentication required", http.StatusUnauthorized)
 			return
@@ -102,7 +103,7 @@ func (h *Handler) DeleteCard() http.HandlerFunc {
 			return
 		}
 
-		usId, err := h.getUserIDFromContext(ctx)
+		usId, err := auth.GetUserID(ctx)
 		if err != nil {
 			h.handleError(w, err, "authentication required", http.StatusUnauthorized)
 			return
@@ -133,7 +134,7 @@ func (h *Handler) GetCards() http.HandlerFunc {
 			return
 		}
 
-		usId, err := h.getUserIDFromContext(ctx)
+		usId, err := auth.GetUserID(ctx)
 		if err != nil {
 			h.handleError(w, err, "authentication required", http.StatusUnauthorized)
 			return
@@ -160,7 +161,7 @@ func (h *Handler) GetByTag() http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
 		defer cancel()
 
-		usId, err := h.getUserIDFromContext(ctx)
+		usId, err := auth.GetUserID(ctx)
 		if err != nil {
 			h.handleError(w, err, "authentication required", http.StatusUnauthorized)
 			return
@@ -230,7 +231,7 @@ func (h *Handler) UpdateCard() http.HandlerFunc {
 
 		upIdStr := chi.URLParam(r, "id")
 
-		usId, err := h.getUserIDFromContext(ctx)
+		usId, err := auth.GetUserID(ctx)
 		if err != nil {
 			h.handleError(w, err, "authentication required", http.StatusUnauthorized)
 			return
@@ -268,6 +269,8 @@ func (h *Handler) UpdateCard() http.HandlerFunc {
 
 func (h *Handler) RegistredRoutes(r chi.Router) {
 	r.Route("/card", func(r chi.Router) {
+		r.Use(auth.AuthenticateUser)
+
 		r.Post("/", h.AddCards())         //add card
 		r.Delete("/{id}", h.DeleteCard()) // Delete card
 		r.Put("/{id}", h.UpdateCard())    // Update card
@@ -336,14 +339,4 @@ func (h *Handler) limitOffset(limitStr, offsetStr string) (pagination, error) {
 	}
 
 	return p, nil
-}
-
-// dummy method
-func (h *Handler) getUserIDFromContext(ctx context.Context) (int, error) {
-	userID, ok := ctx.Value("user_id").(int)
-	if !ok {
-		// TODO: Delete this after real Authenticate realisation
-		return 1, nil
-	}
-	return userID, nil
 }

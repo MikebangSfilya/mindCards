@@ -2,15 +2,20 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 )
 
 const (
-	ctxKeyUser ctxKey = iota
+	CtxKeyUser CtxKey = iota
 )
 
-type ctxKey int8
+var (
+	errUserNotFound = fmt.Errorf("user_id not found in context")
+)
+
+type CtxKey int8
 
 // get header userId
 func AuthenticateUser(next http.Handler) http.Handler {
@@ -28,7 +33,14 @@ func AuthenticateUser(next http.Handler) http.Handler {
 			return
 		}
 
-		//TODO: replase 1 to real user
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKeyUser, userID)))
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), CtxKeyUser, userID)))
 	})
+}
+
+func GetUserID(ctx context.Context) (int, error) {
+	userID, ok := ctx.Value(CtxKeyUser).(int)
+	if !ok {
+		return 0, errUserNotFound
+	}
+	return userID, nil
 }
