@@ -15,21 +15,27 @@ var (
 	errUserNotFound = fmt.Errorf("user_id not found in context")
 )
 
+const (
+	head           = "X-User-ID"
+	errHeadEmpty   = "X-User-ID header required"
+	errInvalidHead = "Invalid X-User-ID. Must be positive integer"
+)
+
 type CtxKey int8
 
 // get header userId
 func AuthenticateUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userIDHead := r.Header.Get("X-User-ID")
+		userIDHead := r.Header.Get(head)
 
 		if userIDHead == "" {
-			http.Error(w, "X-User-ID header required", http.StatusBadRequest)
+			http.Error(w, errHeadEmpty, http.StatusBadRequest)
 			return
 		}
 
 		userID, err := strconv.Atoi(userIDHead)
 		if err != nil || userID <= 0 {
-			http.Error(w, "Invalid X-User-ID. Must be positive integer", http.StatusBadRequest)
+			http.Error(w, errInvalidHead, http.StatusBadRequest)
 			return
 		}
 
