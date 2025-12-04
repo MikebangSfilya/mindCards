@@ -43,11 +43,7 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 	go func() {
 		defer close(jobs)
 		for _, v := range cardParams {
-			card, err := NewCard(v.Title, v.Description, v.Tag)
-			if err != nil {
-				s.logger.Error("failed to create card", "error", err)
-				continue
-			}
+			card := NewCard(v.Title, v.Description, v.Tag)
 
 			cardCopy := *card
 

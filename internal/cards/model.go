@@ -18,7 +18,7 @@ type MindCard struct {
 	Learned     bool      `json:"learned"`
 }
 
-func NewCard(title, description, tag string) (*MindCard, error) {
+func NewCard(title, description, tag string) *MindCard {
 	return &MindCard{
 		Title:       title,
 		Description: description,
@@ -26,6 +26,6 @@ func NewCard(title, description, tag string) (*MindCard, error) {
 		CreatedAt:   time.Now(),
 		LevelStudy:  0,
 		Learned:     false,
-	}, nil
+	}
 
 }
