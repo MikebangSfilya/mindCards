@@ -21,6 +21,7 @@ func TestRowToCard(t *testing.T) {
 			name: "normal_card",
 			row: storage.CardRow{
 				CardID:      1,
+				UserID:      10,
 				Title:       "Go Interfaces",
 				Description: "An interface type is defined as a set of method signatures",
 				Tag:         "golang",
@@ -30,6 +31,7 @@ func TestRowToCard(t *testing.T) {
 			},
 			expected: MindCard{
 				CardID:      1,
+				UserID:      10,
 				Title:       "Go Interfaces",
 				Description: "An interface type is defined as a set of method signatures",
 				Tag:         "golang",
@@ -42,6 +44,7 @@ func TestRowToCard(t *testing.T) {
 			name: "zero_values",
 			row: storage.CardRow{
 				CardID:      0,
+				UserID:      10,
 				Title:       "",
 				Description: "",
 				Tag:         "",
@@ -51,6 +54,7 @@ func TestRowToCard(t *testing.T) {
 			},
 			expected: MindCard{
 				CardID:      0,
+				UserID:      10,
 				Title:       "",
 				Description: "",
 				Tag:         "",
