@@ -97,7 +97,7 @@ func (r *cardRepository) GetCards(ctx context.Context, userId int, limit, offset
 
 func (r *cardRepository) GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]storage.CardRow, error) {
 	query := `
-	SELECT id, title, card_description, tag, created_at, level_study, learned
+	SELECT card_id, user_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
 	WHERE tag = $1 AND user_id = $2
 	LIMIT $3 OFFSET $4
@@ -117,14 +117,14 @@ func (r *cardRepository) GetCardsByTag(ctx context.Context, tag string, userId i
 	return cards, nil
 }
 
-func (r *cardRepository) GetCardById(ctx context.Context, id int) (storage.CardRow, error) {
+func (r *cardRepository) GetCardById(ctx context.Context, cardId, userId int) (storage.CardRow, error) {
 	query := `
-	SELECT *
+	SELECT card_id, user_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
-	WHERE id = $1
+	WHERE card_id = $1 AND user_id = $2
 	`
 
-	row := r.db.QueryRow(ctx, query, id)
+	row := r.db.QueryRow(ctx, query, cardId, userId)
 
 	return scanRow(row)
 }

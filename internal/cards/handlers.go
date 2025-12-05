@@ -34,7 +34,7 @@ type ServiceRepo interface {
 	UpdateCardDescription(ctx context.Context, cardId, userId int, cardsUp Update) error
 	GetCards(ctx context.Context, userId int, limit, offset int16) ([]MindCard, error)
 	GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]MindCard, error)
-	GetCardById(ctx context.Context, id int) (MindCard, error)
+	GetCardById(ctx context.Context, CardId, UserId int) (MindCard, error)
 }
 
 type pagination struct {
@@ -202,13 +202,20 @@ func (h *Handler) GetById() http.HandlerFunc {
 		defer cancel()
 
 		idStr := chi.URLParam(r, "id")
-		id, err := strconv.Atoi(idStr)
+
+		cardId, err := strconv.Atoi(idStr)
 		if err != nil {
 			h.handleError(w, err, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		card, err := h.Service.GetCardById(ctx, id)
+		usId, err := auth.GetUserID(ctx)
+		if err != nil {
+			h.handleError(w, err, "authentication required", http.StatusUnauthorized)
+			return
+		}
+
+		card, err := h.Service.GetCardById(ctx, cardId, usId)
 		if err != nil {
 			h.handleError(w, err, "failed to get cards", http.StatusInternalServerError)
 			return
@@ -229,22 +236,17 @@ func (h *Handler) UpdateCard() http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), baseTimeOut)
 		defer cancel()
 
-		upIdStr := chi.URLParam(r, "id")
-
 		usId, err := auth.GetUserID(ctx)
 		if err != nil {
 			h.handleError(w, err, "authentication required", http.StatusUnauthorized)
 			return
 		}
 
-		upId, err := strconv.Atoi(upIdStr)
+		upIdStr := chi.URLParam(r, "id")
+		cardIt, err := strconv.Atoi(upIdStr)
 		if err != nil {
 			h.handleError(w, err, err.Error(), http.StatusBadRequest)
 			return
-		}
-
-		if err := decoder(r, &usId); err != nil {
-			h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
 		}
 
 		dtoUp := Update{}
@@ -258,7 +260,7 @@ func (h *Handler) UpdateCard() http.HandlerFunc {
 			return
 		}
 
-		if err := h.Service.UpdateCardDescription(ctx, upId, upId, dtoUp); err != nil {
+		if err := h.Service.UpdateCardDescription(ctx, cardIt, usId, dtoUp); err != nil {
 			h.handleError(w, err, ErrUpdateCard, http.StatusBadRequest)
 			return
 		}

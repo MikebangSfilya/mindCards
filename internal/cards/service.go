@@ -15,7 +15,7 @@ type Repo interface {
 	UpdateCardDescription(ctx context.Context, cardId, userId int, newDesc string) error
 	DeleteCard(ctx context.Context, cardId, userId int) error
 	GetCards(ctx context.Context, userId int, limit, offset int16) ([]storage.CardRow, error)
-	GetCardById(ctx context.Context, cardId int) (storage.CardRow, error)
+	GetCardById(ctx context.Context, cardId, userId int) (storage.CardRow, error)
 	GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]storage.CardRow, error)
 }
 
@@ -80,13 +80,7 @@ func (s *Service) DeleteCard(ctx context.Context, cardId, userId int) error {
 
 // Update new description in DB
 func (s *Service) UpdateCardDescription(ctx context.Context, cardId, UserID int, cardsUp Update) error {
-
-	if err := s.Repo.UpdateCardDescription(ctx, cardId, UserID, cardsUp.NewDescription); err != nil {
-		return err
-	}
-
-	return nil
-
+	return s.Repo.UpdateCardDescription(ctx, cardId, UserID, cardsUp.NewDescription)
 }
 
 // Возможно не понадобится
@@ -120,8 +114,8 @@ func (s *Service) GetCardsByTag(ctx context.Context, tag string, userId int, lim
 }
 
 // Get one card by unic ID
-func (s *Service) GetCardById(ctx context.Context, cardId int) (MindCard, error) {
-	row, err := s.Repo.GetCardById(ctx, cardId)
+func (s *Service) GetCardById(ctx context.Context, cardId, userId int) (MindCard, error) {
+	row, err := s.Repo.GetCardById(ctx, cardId, userId)
 	if err != nil {
 		return MindCard{}, err
 	}
