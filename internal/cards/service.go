@@ -35,10 +35,10 @@ func NewService(repo Repo, logger *slog.Logger) *Service {
 
 // Add cards to DB
 // TODO: collect errors
-func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (*[]MDAddedDTO, error) {
+func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) ([]*MDAddedDTO, error) {
 
 	jobs := make(chan *MindCard, 50)
-	results := make([]MDAddedDTO, 0, len(cardParams))
+	results := make([]*MDAddedDTO, 0, len(cardParams))
 
 	go func() {
 		defer close(jobs)
@@ -49,7 +49,7 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 
 			jobs <- card
 
-			results = append(results, MDAddedDTO{
+			results = append(results, &MDAddedDTO{
 				Title:       cardCopy.Title,
 				Description: cardCopy.Description,
 				Tag:         cardCopy.Tag,
@@ -70,7 +70,7 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 		}()
 	}
 
-	return &results, nil
+	return results, nil
 }
 
 // Delete card from DB
