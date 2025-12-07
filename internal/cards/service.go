@@ -35,10 +35,10 @@ func NewService(repo Repo, logger *slog.Logger) *Service {
 
 // Add cards to DB
 // TODO: collect errors
-func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (*[]MDAddedDTO, error) {
+func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) ([]*MDAddedDTO, error) {
 
 	jobs := make(chan *MindCard, 50)
-	results := make([]MDAddedDTO, 0, len(cardParams))
+	results := make([]*MDAddedDTO, 0, len(cardParams))
 
 	go func() {
 		defer close(jobs)
@@ -49,7 +49,7 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 
 			jobs <- card
 
-			results = append(results, MDAddedDTO{
+			results = append(results, &MDAddedDTO{
 				Title:       cardCopy.Title,
 				Description: cardCopy.Description,
 				Tag:         cardCopy.Tag,
@@ -70,7 +70,7 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 		}()
 	}
 
-	return &results, nil
+	return results, nil
 }
 
 // Delete card from DB
@@ -89,42 +89,39 @@ func (s *Service) UpdateLvl() {
 }
 
 // Get list of cards
-func (s *Service) GetCards(ctx context.Context, userId int, limit, offset int16) ([]MindCard, error) {
+func (s *Service) GetCards(ctx context.Context, userId int, limit, offset int16) ([]*MindCard, error) {
 	rows, err := s.Repo.GetCards(ctx, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 
-	cards := rowsToCards(rows)
-
-	return cards, nil
+	return rowsToCards(rows), nil
 
 }
 
 // Get cards filtered by Tag
-func (s *Service) GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]MindCard, error) {
+func (s *Service) GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]*MindCard, error) {
 
 	rows, err := s.Repo.GetCardsByTag(ctx, tag, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 
-	cards := rowsToCards(rows)
-	return cards, nil
+	return rowsToCards(rows), nil
 }
 
 // Get one card by unic ID
-func (s *Service) GetCardById(ctx context.Context, cardId, userId int) (MindCard, error) {
+func (s *Service) GetCardById(ctx context.Context, cardId, userId int) (*MindCard, error) {
 	row, err := s.Repo.GetCardById(ctx, cardId, userId)
 	if err != nil {
-		return MindCard{}, err
+		return nil, err
 	}
 
 	return rowToCard(row), nil
 }
 
-func rowToCard(row storage.CardRow) MindCard {
-	return MindCard{
+func rowToCard(row storage.CardRow) *MindCard {
+	return &MindCard{
 		CardID:      row.CardID,
 		UserID:      row.UserID,
 		Title:       row.Title,
@@ -136,13 +133,13 @@ func rowToCard(row storage.CardRow) MindCard {
 	}
 }
 
-func rowsToCards(rows []storage.CardRow) []MindCard {
+func rowsToCards(rows []storage.CardRow) []*MindCard {
 
 	if rows == nil {
-		return []MindCard{}
+		return nil
 	}
 
-	result := make([]MindCard, len(rows))
+	result := make([]*MindCard, len(rows))
 
 	for i, row := range rows {
 		result[i] = rowToCard(row)

@@ -29,12 +29,12 @@ const (
 
 // ServiceRepo is an interface for connecting to the service layer
 type ServiceRepo interface {
-	AddCards(ctx context.Context, userId int, cardParams []Card) (*[]MDAddedDTO, error)
+	AddCards(ctx context.Context, userId int, cardParams []Card) ([]*MDAddedDTO, error)
 	DeleteCard(ctx context.Context, cardId, userId int) error
 	UpdateCardDescription(ctx context.Context, cardId, userId int, cardsUp Update) error
-	GetCards(ctx context.Context, userId int, limit, offset int16) ([]MindCard, error)
-	GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]MindCard, error)
-	GetCardById(ctx context.Context, CardId, UserId int) (MindCard, error)
+	GetCards(ctx context.Context, userId int, limit, offset int16) ([]*MindCard, error)
+	GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]*MindCard, error)
+	GetCardById(ctx context.Context, CardId, UserId int) (*MindCard, error)
 }
 
 type pagination struct {
