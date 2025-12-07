@@ -31,7 +31,7 @@ const (
 type ServiceRepo interface {
 	AddCards(ctx context.Context, userId int, cardParams []Card) ([]*MDAddedDTO, error)
 	DeleteCard(ctx context.Context, cardId, userId int) error
-	UpdateCardDescription(ctx context.Context, cardId, userId int, cardsUp Update) error
+	UpdateCardDescription(ctx context.Context, cardId, UserID int, cardsUp Update) (*MindCard, error)
 	GetCards(ctx context.Context, userId int, limit, offset int16) ([]*MindCard, error)
 	GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]*MindCard, error)
 	GetCardById(ctx context.Context, CardId, UserId int) (*MindCard, error)
@@ -260,11 +260,14 @@ func (h *Handler) UpdateCard() http.HandlerFunc {
 			return
 		}
 
-		if err := h.Service.UpdateCardDescription(ctx, cardIt, usId, dtoUp); err != nil {
+		card, err := h.Service.UpdateCardDescription(ctx, cardIt, usId, dtoUp)
+		if err != nil {
 			h.handleError(w, err, ErrUpdateCard, http.StatusBadRequest)
 			return
 		}
-
+		if err := encoder(w, card); err != nil {
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 	}
 }
