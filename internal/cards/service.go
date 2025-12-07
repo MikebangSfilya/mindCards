@@ -46,6 +46,7 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 	go func() {
 		defer close(jobs)
 		for _, v := range cardParams {
+
 			card := NewCard(v.Title, v.Description, v.Tag)
 
 			cardCopy := *card
@@ -71,6 +72,8 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 			s.logger.Info("adding card", "title", job.Title)
 		}()
 	}
+
+	close(errChan)
 	var errs []error
 	for err := range errChan {
 		errs = append(errs, err)
