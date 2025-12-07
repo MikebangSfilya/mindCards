@@ -57,18 +57,41 @@ func (r *cardRepository) DeleteCard(ctx context.Context, cardId, userId int) err
 	return nil
 }
 
-func (r *cardRepository) UpdateCardDescription(ctx context.Context, cardId, userId int, newDesc string) error {
+func (r *cardRepository) UpdateCardDescription(ctx context.Context, cardId, userId int, newDesc string) (storage.CardRow, error) {
 	query := `
-	UPDATE memory_cards
-	SET card_description = $1
-	WHERE card_id = $2 AND user_id = $3
-	`
+        UPDATE memory_cards
+        SET card_description = $1
+        WHERE card_id = $2 AND user_id = $3
+        RETURNING 
+            card_id,
+            user_id,
+            title,
+            card_description,
+            tag,
+            created_at,
+            level_study,
+            learned
+    `
 
-	_, err := r.db.Exec(ctx, query, newDesc, cardId, userId)
+	var card storage.CardRow
+	err := r.db.QueryRow(ctx, query, newDesc, cardId, userId).Scan(
+		&card.CardID,
+		&card.UserID,
+		&card.Title,
+		&card.Description,
+		&card.Tag,
+		&card.CreatedAt,
+		&card.LevelStudy,
+		&card.Learned,
+	)
 	if err != nil {
-		return err
+		if err == pgx.ErrNoRows {
+			return storage.CardRow{}, fmt.Errorf("card not found or access denied")
+		}
+		return storage.CardRow{}, fmt.Errorf("failed to update card description: %w", err)
 	}
-	return nil
+
+	return card, nil
 
 }
 

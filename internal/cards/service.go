@@ -2,6 +2,8 @@ package cards
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -12,7 +14,7 @@ import (
 
 type Repo interface {
 	AddCard(ctx context.Context, userId int, card *MindCard) error
-	UpdateCardDescription(ctx context.Context, cardId, userId int, newDesc string) error
+	UpdateCardDescription(ctx context.Context, cardId, userId int, newDesc string) (storage.CardRow, error)
 	DeleteCard(ctx context.Context, cardId, userId int) error
 	GetCards(ctx context.Context, userId int, limit, offset int16) ([]storage.CardRow, error)
 	GetCardById(ctx context.Context, cardId, userId int) (storage.CardRow, error)
@@ -39,6 +41,7 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 
 	jobs := make(chan *MindCard, 50)
 	results := make([]*MDAddedDTO, 0, len(cardParams))
+	errChan := make(chan error, len(cardParams))
 
 	go func() {
 		defer close(jobs)
@@ -63,11 +66,18 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 			defer cancel()
 			if err := s.Repo.AddCard(dbContext, userId, job); err != nil {
 				s.logger.Error("failed to add card", "error", err)
-
+				errChan <- err
 			}
-
 			s.logger.Info("adding card", "title", job.Title)
 		}()
+	}
+	var errs []error
+	for err := range errChan {
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		return results, fmt.Errorf("не удалось добавить %d карточек: %v", len(errs), errors.Join(errs...))
 	}
 
 	return results, nil
@@ -79,8 +89,13 @@ func (s *Service) DeleteCard(ctx context.Context, cardId, userId int) error {
 }
 
 // Update new description in DB
-func (s *Service) UpdateCardDescription(ctx context.Context, cardId, UserID int, cardsUp Update) error {
-	return s.Repo.UpdateCardDescription(ctx, cardId, UserID, cardsUp.NewDescription)
+func (s *Service) UpdateCardDescription(ctx context.Context, cardId, UserID int, cardsUp Update) (*MindCard, error) {
+	row, err := s.Repo.UpdateCardDescription(ctx, cardId, UserID, cardsUp.NewDescription)
+	if err != nil {
+		return nil, err
+	}
+
+	return rowToCard(row), nil
 }
 
 // Возможно не понадобится
