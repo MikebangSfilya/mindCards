@@ -25,8 +25,12 @@ func (c *Card) Validate() error {
 	trimmedDesc := strings.TrimSpace(c.Description)
 	trimmedTag := strings.TrimSpace(c.Tag)
 
-	if trimmedTitle == "" || trimmedDesc == "" || trimmedTag == "" {
-		return errAllFieldNeeder
+	if trimmedTitle == "" {
+		return fmt.Errorf("error validate, title is empty.")
+	} else if trimmedDesc == "" {
+		return fmt.Errorf("error validate, description is empty.")
+	} else if trimmedTag == "" {
+		return fmt.Errorf("error validate, tag is empty.")
 	}
 	return nil
 }

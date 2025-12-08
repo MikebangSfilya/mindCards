@@ -1,11 +1,8 @@
 package cards
 
 import (
-	"fmt"
 	"time"
 )
-
-var errAllFieldNeeder = fmt.Errorf("all fields are required")
 
 type MindCard struct {
 	CardID      int64     `json:"card_id"`
