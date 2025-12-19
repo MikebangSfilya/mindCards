@@ -42,7 +42,6 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 	jobs := make(chan *MindCard, 50)
 	results := make([]*MDAddedDTO, 0, len(cardParams))
 	errChan := make(chan error, len(cardParams))
-
 	go func() {
 		defer close(jobs)
 		for _, v := range cardParams {
