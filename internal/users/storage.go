@@ -18,7 +18,7 @@ func NewUserPool(db *pgxpool.Pool) *UsersStorage {
 	return repo
 }
 
-func (s *UsersStorage) SaveUser(ctx context.Context, user *Users) error {
+func (s *UsersStorage) SaveUser(ctx context.Context, user *User) error {
 	query := `
 		INSERT INTO users
 		(email, password_hash)
@@ -26,7 +26,7 @@ func (s *UsersStorage) SaveUser(ctx context.Context, user *Users) error {
 		RETURNING user_id
 	`
 
-	err := s.db.QueryRow(ctx, query, user.Email, user.Password).Scan(&user.UserId)
+	err := s.db.QueryRow(ctx, query, user.Email, user.EncryptedPassword).Scan(&user.UserId)
 	if err != nil {
 		return err
 	}

@@ -9,7 +9,7 @@ import (
 )
 
 type Save interface {
-	SaveUser(ctx context.Context, user *Users) error
+	SaveUser(ctx context.Context, user *User) error
 }
 
 func SaveUser(save Save) http.HandlerFunc {
@@ -18,7 +18,7 @@ func SaveUser(save Save) http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer cancel()
 
-		var user Users
+		var user User
 		if err := decoder(r, &user); err != nil {
 			handleError(w, err, err.Error(), http.StatusBadRequest)
 			return
