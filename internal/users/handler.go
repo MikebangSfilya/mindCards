@@ -13,25 +13,36 @@ type Save interface {
 }
 
 func SaveUser(save Save) http.HandlerFunc {
+	type Request struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer cancel()
 
-		var user User
-		if err := decoder(r, &user); err != nil {
+		var uReq Request
+		if err := decoder(r, &uReq); err != nil {
 			handleError(w, err, err.Error(), http.StatusBadRequest)
 			return
 		}
+		u, err := NewUser(uReq.Email, uReq.Password)
 
-		if err := save.SaveUser(ctx, &user); err != nil {
+		if err != nil {
+			handleError(w, err, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err := save.SaveUser(ctx, u); err != nil {
 			handleError(w, err, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		result := UserResponce{
-			Email:  user.Email,
-			UserId: user.UserId,
+			Email:  u.Email,
+			UserId: u.UserId,
 		}
 
 		if err := encoder(w, result); err != nil {
