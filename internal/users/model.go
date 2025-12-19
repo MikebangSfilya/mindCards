@@ -31,10 +31,10 @@ func NewUser(email, pass string) (*User, error) {
 }
 
 func simpleValidate(email, pass string) bool {
-	if len(email) == 0 {
+	if email == "" {
 		return false
 	}
-	if len(pass) == 0 {
+	if pass == "" {
 		return false
 	}
 	return true
