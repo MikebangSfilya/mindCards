@@ -15,7 +15,7 @@ func TestRowToCard(t *testing.T) {
 	testCases := []struct {
 		name     string
 		row      storage.CardRow
-		expected MindCard
+		expected *MindCard
 	}{
 		{
 			name: "normal_card",
@@ -29,7 +29,7 @@ func TestRowToCard(t *testing.T) {
 				LevelStudy:  2,
 				Learned:     false,
 			},
-			expected: MindCard{
+			expected: &MindCard{
 				CardID:      1,
 				UserID:      10,
 				Title:       "Go Interfaces",
@@ -52,7 +52,7 @@ func TestRowToCard(t *testing.T) {
 				LevelStudy:  0,
 				Learned:     false,
 			},
-			expected: MindCard{
+			expected: &MindCard{
 				CardID:      0,
 				UserID:      10,
 				Title:       "",
@@ -74,7 +74,7 @@ func TestRowToCard(t *testing.T) {
 				LevelStudy:  5,
 				Learned:     true,
 			},
-			expected: MindCard{
+			expected: &MindCard{
 				CardID:      999,
 				Title:       "Max Level",
 				Description: "Already learned",
@@ -100,7 +100,7 @@ func TestRowsToCards(t *testing.T) {
 	testCases := []struct {
 		name     string
 		rows     []storage.CardRow
-		expected []MindCard
+		expected []*MindCard
 	}{
 		{
 			name: "multiple_cards",
@@ -124,7 +124,7 @@ func TestRowsToCards(t *testing.T) {
 					Learned:     true,
 				},
 			},
-			expected: []MindCard{
+			expected: []*MindCard{
 				{
 					CardID:      1,
 					Title:       "First",
@@ -148,12 +148,12 @@ func TestRowsToCards(t *testing.T) {
 		{
 			name:     "empty_slice",
 			rows:     []storage.CardRow{},
-			expected: []MindCard{},
+			expected: []*MindCard{},
 		},
 		{
 			name:     "nil_slice",
 			rows:     nil,
-			expected: []MindCard{},
+			expected: nil,
 		},
 		{
 			name: "single_card",
@@ -168,7 +168,7 @@ func TestRowsToCards(t *testing.T) {
 					Learned:     false,
 				},
 			},
-			expected: []MindCard{
+			expected: []*MindCard{
 				{
 					CardID:      42,
 					Title:       "Single",

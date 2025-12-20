@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDecoder(t *testing.T) {
@@ -17,21 +20,13 @@ func TestDecoder(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/", bytes.NewReader(testCase))
 	dtoIn := Card{}
 	err := decoder(req, &dtoIn)
-	if err != nil {
-		t.Errorf("decoder failed %v", err)
-	}
-	if dtoIn.Title == "" {
-		t.Errorf("empty title")
-	}
-	if dtoIn.Description == "" {
-		t.Errorf("empty description")
-	}
-	if dtoIn.Tag == "" {
-		t.Errorf("empty tag")
-	}
+	require.NoError(t, err)
+	require.NotNil(t, dtoIn)
+	assert.Equal(t, dto.Title, dtoIn.Title)
+	assert.Equal(t, dto.Description, dtoIn.Description)
 
+	assert.Equal(t, dto.Tag, dtoIn.Tag)
 }
 
 func TestBase(t *testing.T) {
-
 }

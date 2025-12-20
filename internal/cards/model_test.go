@@ -3,7 +3,7 @@ package cards
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewModel(t *testing.T) {
@@ -36,10 +36,9 @@ func TestNewModel(t *testing.T) {
 	for _, tCase := range testInput {
 		t.Run(tCase.name, func(t *testing.T) {
 			card := NewCard(tCase.title, tCase.description, tCase.tag)
-			require.Equal(t, tCase.title, card.Title)
-			require.Equal(t, tCase.description, card.Description)
-			require.Equal(t, tCase.tag, card.Tag)
+			assert.Equal(t, tCase.title, card.Title)
+			assert.Equal(t, tCase.description, card.Description)
+			assert.Equal(t, tCase.tag, card.Tag)
 		})
 	}
-
 }

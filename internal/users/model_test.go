@@ -3,6 +3,7 @@ package users
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,18 +55,15 @@ func TestNewUser(t *testing.T) {
 
 	for _, tt := range tCases {
 		t.Run(tt.name, func(t *testing.T) {
-
 			if !tt.wantErr {
 				u, err := NewUser(tt.email, tt.password)
 				require.NoError(t, err)
 				require.NotNil(t, u)
-				require.Equal(t, u.Email, tt.email)
+				assert.Equal(t, tt.email, u.Email)
 			} else {
 				_, err := NewUser(tt.email, tt.password)
 				require.EqualError(t, err, tt.err.Error())
 			}
-
 		})
 	}
-
 }
