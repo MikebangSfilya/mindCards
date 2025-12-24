@@ -2,6 +2,7 @@ package cards
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -11,19 +12,33 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type cardRepository struct {
+type CardRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewCardPool(db *pgxpool.Pool) *cardRepository {
-	repo := &cardRepository{
+type CardTransaction struct {
+	tx pgx.Tx
+}
+
+func NewCardPool(db *pgxpool.Pool) Repo {
+	repo := CardRepository{
 		db: db,
 	}
 
-	return repo
+	return &repo
 }
 
-func (r *cardRepository) AddCard(ctx context.Context, userId int, card *MindCard) error {
+func (r *CardRepository) BeginTransaction(ctx context.Context) (Transaction, error) {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	return &CardTransaction{
+		tx: tx,
+	}, nil
+}
+
+func (ct *CardTransaction) AddCard(ctx context.Context, userId int, card *MindCard) error {
 	query := `
 	INSERT INTO memory_cards 
     (user_id, title, card_description, tag, created_at, level_study, learned)
@@ -33,20 +48,20 @@ func (r *cardRepository) AddCard(ctx context.Context, userId int, card *MindCard
 
 	card.Tag = strings.ToLower(card.Tag)
 
-	err := r.db.QueryRow(ctx, query, userId, card.Title, card.Description, card.Tag, card.CreatedAt, card.LevelStudy, card.Learned).Scan(&card.CardID)
+	err := ct.tx.QueryRow(ctx, query, userId, card.Title, card.Description, card.Tag, card.CreatedAt, card.LevelStudy, card.Learned).Scan(&card.CardID)
 	if err != nil {
 		return fmt.Errorf("SQL error: %w", err)
 	}
 	return nil
 }
 
-func (r *cardRepository) DeleteCard(ctx context.Context, cardId, userId int) error {
+func (ct *CardTransaction) DeleteCard(ctx context.Context, cardId, userId int) error {
 	query := `
     DELETE FROM memory_cards 
     WHERE card_id = $1 AND user_id = $2
     `
 
-	result, err := r.db.Exec(ctx, query, cardId, userId)
+	result, err := ct.tx.Exec(ctx, query, cardId, userId)
 	if err != nil {
 		return err
 	}
@@ -57,7 +72,7 @@ func (r *cardRepository) DeleteCard(ctx context.Context, cardId, userId int) err
 	return nil
 }
 
-func (r *cardRepository) UpdateCardDescription(ctx context.Context, cardId, userId int, newDesc string) (storage.CardRow, error) {
+func (ct *CardTransaction) UpdateCardDescription(ctx context.Context, cardId, userId int, newDesc string) (storage.CardRow, error) {
 	query := `
         UPDATE memory_cards
         SET card_description = $1
@@ -74,7 +89,7 @@ func (r *cardRepository) UpdateCardDescription(ctx context.Context, cardId, user
     `
 
 	var card storage.CardRow
-	err := r.db.QueryRow(ctx, query, newDesc, cardId, userId).Scan(
+	err := ct.tx.QueryRow(ctx, query, newDesc, cardId, userId).Scan(
 		&card.CardID,
 		&card.UserID,
 		&card.Title,
@@ -85,7 +100,8 @@ func (r *cardRepository) UpdateCardDescription(ctx context.Context, cardId, user
 		&card.Learned,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
 			return storage.CardRow{}, fmt.Errorf("card not found or access denied")
 		}
 		return storage.CardRow{}, fmt.Errorf("failed to update card description: %w", err)
@@ -95,7 +111,7 @@ func (r *cardRepository) UpdateCardDescription(ctx context.Context, cardId, user
 
 }
 
-func (r *cardRepository) GetCards(ctx context.Context, userId int, limit, offset int16) ([]storage.CardRow, error) {
+func (ct *CardTransaction) GetCards(ctx context.Context, userId int, limit, offset int16) ([]storage.CardRow, error) {
 	query := `
 	SELECT card_id, user_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
@@ -104,21 +120,16 @@ func (r *cardRepository) GetCards(ctx context.Context, userId int, limit, offset
 	
 	`
 
-	rows, err := r.db.Query(ctx, query, userId, limit, offset)
+	rows, err := ct.tx.Query(ctx, query, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	cards, err := scanRows(rows)
-	if err != nil {
-		return nil, err
-	}
-
-	return cards, nil
+	return scanRows(rows)
 }
 
-func (r *cardRepository) GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]storage.CardRow, error) {
+func (ct *CardTransaction) GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]storage.CardRow, error) {
 	query := `
 	SELECT card_id, user_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
@@ -126,30 +137,33 @@ func (r *cardRepository) GetCardsByTag(ctx context.Context, tag string, userId i
 	LIMIT $3 OFFSET $4
 	`
 
-	rows, err := r.db.Query(ctx, query, tag, userId, limit, offset)
+	rows, err := ct.tx.Query(ctx, query, tag, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	cards, err := scanRows(rows)
-	if err != nil {
-		return nil, err
-	}
-
-	return cards, nil
+	return scanRows(rows)
 }
 
-func (r *cardRepository) GetCardById(ctx context.Context, cardId, userId int) (storage.CardRow, error) {
+func (ct *CardTransaction) GetCardById(ctx context.Context, cardId, userId int) (storage.CardRow, error) {
 	query := `
 	SELECT card_id, user_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
 	WHERE card_id = $1 AND user_id = $2
 	`
 
-	row := r.db.QueryRow(ctx, query, cardId, userId)
+	row := ct.tx.QueryRow(ctx, query, cardId, userId)
 
 	return scanRow(row)
+}
+
+func (ct *CardTransaction) Commit(ctx context.Context) error {
+	return ct.tx.Commit(ctx)
+}
+
+func (ct *CardTransaction) Rollback(ctx context.Context) error {
+	return ct.tx.Rollback(ctx)
 }
 
 func scanRow(row pgx.Row) (storage.CardRow, error) {
