@@ -2,23 +2,25 @@ package cards
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/MikebangSfilya/mindCards/internal/storage"
 )
 
-// интерфейс для связи с репозиторий
-
-type Repo interface {
+type Transaction interface {
 	AddCard(ctx context.Context, userId int, card *MindCard) error
 	UpdateCardDescription(ctx context.Context, cardId, userId int, newDesc string) (storage.CardRow, error)
 	DeleteCard(ctx context.Context, cardId, userId int) error
 	GetCards(ctx context.Context, userId int, limit, offset int16) ([]storage.CardRow, error)
 	GetCardById(ctx context.Context, cardId, userId int) (storage.CardRow, error)
 	GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]storage.CardRow, error)
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
+}
+
+type Repo interface {
+	BeginTransaction(ctx context.Context) (Transaction, error)
 }
 
 // general Service struct
@@ -35,81 +37,103 @@ func NewService(repo Repo, logger *slog.Logger) *Service {
 	}
 }
 
-// Add cards to DB
-// TODO: collect errors
+// AddCards cards to DB
 func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) ([]*MDAddedDTO, error) {
 
-	jobs := make(chan *MindCard, 50)
+	tx, err := s.Repo.BeginTransaction(ctx)
+	if err != nil {
+		s.logger.Error("failed to begin transaction", "error", err)
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	
+	defer tx.Rollback(ctx)
+
 	results := make([]*MDAddedDTO, 0, len(cardParams))
-	errChan := make(chan error, len(cardParams))
-	go func() {
-		defer close(jobs)
-		for _, v := range cardParams {
 
-			card := NewCard(v.Title, v.Description, v.Tag)
+	for i, cardParam := range cardParams {
+		card := NewCard(cardParam.Title, cardParam.Description, cardParam.Tag)
 
-			cardCopy := *card
-
-			jobs <- card
-
-			results = append(results, &MDAddedDTO{
-				Title:       cardCopy.Title,
-				Description: cardCopy.Description,
-				Tag:         cardCopy.Tag,
-			})
+		if err := tx.AddCard(ctx, userId, card); err != nil {
+			s.logger.Error("failed to add card", "index", i, "error", err)
+			_ = tx.Rollback(ctx)
+			return nil, fmt.Errorf("add card at index %d: %w", i, err)
 		}
-	}()
+		results = append(results, &MDAddedDTO{
+			Title:       cardParam.Title,
+			Description: cardParam.Description,
+			Tag:         cardParam.Tag,
+		})
 
-	for job := range jobs {
-		go func() {
-			dbContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if err := s.Repo.AddCard(dbContext, userId, job); err != nil {
-				s.logger.Error("failed to add card", "error", err)
-				errChan <- err
-			}
-			s.logger.Info("adding card", "title", job.Title)
-		}()
 	}
 
-	close(errChan)
-	var errs []error
-	for err := range errChan {
-		errs = append(errs, err)
+	if err := tx.Commit(ctx); err != nil {
+		s.logger.Error("failed to commit", "error", err)
+		return nil, fmt.Errorf("commit: %w", err)
 	}
 
-	if len(errs) > 0 {
-		return results, fmt.Errorf("не удалось добавить %d карточек: %v", len(errs), errors.Join(errs...))
-	}
+	s.logger.Info("batch add completed", "count", len(results))
 
 	return results, nil
 }
 
-// Delete card from DB
+// DeleteCard card from DB
 func (s *Service) DeleteCard(ctx context.Context, cardId, userId int) error {
-	return s.Repo.DeleteCard(ctx, cardId, userId)
+	tx, err := s.Repo.BeginTransaction(ctx)
+	if err != nil {
+		s.logger.Error("failed to begin transaction", "error", err)
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := tx.DeleteCard(ctx, cardId, userId); err != nil {
+		s.logger.Error("failed to delete card", "error", err)
+		return fmt.Errorf("delete card: %w", err)
+	}
+
+	return tx.Commit(ctx)
 }
 
-// Update new description in DB
+// UpdateCardDescription new description in DB
 func (s *Service) UpdateCardDescription(ctx context.Context, cardId, UserID int, cardsUp Update) (*MindCard, error) {
-	row, err := s.Repo.UpdateCardDescription(ctx, cardId, UserID, cardsUp.NewDescription)
+	tx, err := s.Repo.BeginTransaction(ctx)
+	if err != nil {
+		s.logger.Error("failed to begin transaction", "error", err)
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	row, err := tx.UpdateCardDescription(ctx, cardId, UserID, cardsUp.NewDescription)
 	if err != nil {
 		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit: %w", err)
 	}
 
 	return rowToCard(row), nil
 }
 
-// Возможно не понадобится
+// UpdateLvl Возможно не понадобится
 func (s *Service) UpdateLvl() {
 
 }
 
 // Get list of cards
 func (s *Service) GetCards(ctx context.Context, userId int, limit, offset int16) ([]*MindCard, error) {
-	rows, err := s.Repo.GetCards(ctx, userId, limit, offset)
+	tx, err := s.Repo.BeginTransaction(ctx)
+	if err != nil {
+		s.logger.Error("failed to begin transaction", "error", err)
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	rows, err := tx.GetCards(ctx, userId, limit, offset)
 	if err != nil {
 		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit: %w", err)
 	}
 
 	return rowsToCards(rows), nil
@@ -118,20 +142,41 @@ func (s *Service) GetCards(ctx context.Context, userId int, limit, offset int16)
 
 // Get cards filtered by Tag
 func (s *Service) GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]*MindCard, error) {
+	tx, err := s.Repo.BeginTransaction(ctx)
+	if err != nil {
+		s.logger.Error("failed to begin transaction", "error", err)
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
 
-	rows, err := s.Repo.GetCardsByTag(ctx, tag, userId, limit, offset)
+	rows, err := tx.GetCardsByTag(ctx, tag, userId, limit, offset)
 	if err != nil {
 		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit: %w", err)
 	}
 
 	return rowsToCards(rows), nil
 }
 
-// Get one card by unic ID
+// Get one card by ID
 func (s *Service) GetCardById(ctx context.Context, cardId, userId int) (*MindCard, error) {
-	row, err := s.Repo.GetCardById(ctx, cardId, userId)
+	tx, err := s.Repo.BeginTransaction(ctx)
+	if err != nil {
+		s.logger.Error("failed to begin transaction", "error", err)
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	row, err := tx.GetCardById(ctx, cardId, userId)
 	if err != nil {
 		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit: %w", err)
 	}
 
 	return rowToCard(row), nil
