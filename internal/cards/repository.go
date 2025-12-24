@@ -2,6 +2,7 @@ package cards
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -19,7 +20,7 @@ type CardTransaction struct {
 	tx pgx.Tx
 }
 
-func NewCardPool(db *pgxpool.Pool) *CardRepository {
+func NewCardPool(db *pgxpool.Pool) Repo {
 	repo := CardRepository{
 		db: db,
 	}
@@ -99,7 +100,8 @@ func (ct *CardTransaction) UpdateCardDescription(ctx context.Context, cardId, us
 		&card.Learned,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
 			return storage.CardRow{}, fmt.Errorf("card not found or access denied")
 		}
 		return storage.CardRow{}, fmt.Errorf("failed to update card description: %w", err)
