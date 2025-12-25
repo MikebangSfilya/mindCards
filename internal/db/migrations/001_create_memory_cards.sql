@@ -19,9 +19,7 @@ CREATE TABLE IF NOT EXISTS memory_cards (
 
 
 
-CREATE INDEX IF NOT EXISTS idx_tag ON memory_cards (tag);
 CREATE INDEX IF NOT EXISTS idx_title ON memory_cards (title);
-CREATE INDEX IF NOT EXISTS idx_learned ON memory_cards (learned);
 CREATE INDEX IF NOT EXISTS idx_level_study ON memory_cards (level_study);
 CREATE INDEX IF NOT EXISTS idx_memory_cards_user_id ON memory_cards (user_id);
 CREATE INDEX IF NOT EXISTS idx_user_learned ON memory_cards (user_id, learned);
