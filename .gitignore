@@ -6,3 +6,4 @@ coverage.out
 *.html
 config.yaml
 todo.md
+.idea
