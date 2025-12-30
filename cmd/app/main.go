@@ -59,7 +59,7 @@ func main() {
 	router.Post("/user", users.SaveUser(userRepo))
 
 	srv := &http.Server{
-		Addr:         cfg.Adress,
+		Addr:         cfg.Address,
 		Handler:      router,
 		ReadTimeout:  cfg.HTTTPServer.Timeout,
 		WriteTimeout: cfg.HTTTPServer.Timeout,

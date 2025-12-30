@@ -15,7 +15,7 @@ type Config struct {
 }
 
 type HTTTPServer struct {
-	Adress      string        `yaml:"addres" env-default:"localhost:8080"`
+	Address     string        `yaml:"address" env-default:"localhost:8080"`
 	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
 	IdleTimeout time.Duration `yaml:"idle-timeout" env-default:"30s"`
 }
