@@ -23,8 +23,8 @@ type HTTTPServer struct {
 type ConfigDB struct {
 	DBHost string `yaml:"DB_HOST"`
 	DBPort string `yaml:"DB_PORT"`
-	DBUSer string `yaml:"DB_USER"`
-	DBPass string `yaml:"DB_PASSWORD"`
+	DBUser string `yaml:"DB_USER"`
+	DBPass string `yaml:"DB_PASS"`
 	DBName string `yaml:"DB_NAME"`
 }
 
@@ -35,7 +35,7 @@ func MustLoad() Config {
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		log.Fatal("config file not exitst")
+		log.Fatal("config file not exits")
 	}
 
 	var cfg Config
