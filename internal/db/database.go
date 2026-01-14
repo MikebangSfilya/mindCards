@@ -12,7 +12,6 @@ import (
 
 func CreateDataBase(cfg config.Config) *pgxpool.Pool {
 
-	// connStr := "postgres://test:test@localhost:5434/testdb?sslmode=disable"
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		cfg.DBUser,
 		cfg.DBPass,
