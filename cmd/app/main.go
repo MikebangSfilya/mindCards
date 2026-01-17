@@ -12,7 +12,7 @@ import (
 
 	"github.com/MikebangSfilya/mindCards/internal/cards"
 	"github.com/MikebangSfilya/mindCards/internal/config"
-	database "github.com/MikebangSfilya/mindCards/internal/db"
+	"github.com/MikebangSfilya/mindCards/internal/repository/db"
 	"github.com/MikebangSfilya/mindCards/internal/users"
 
 	"github.com/go-chi/chi/v5"
@@ -59,7 +59,7 @@ func main() {
 	router.Post("/user", users.SaveUser(userRepo))
 
 	srv := &http.Server{
-		Addr:         cfg.Adress,
+		Addr:         cfg.Address,
 		Handler:      router,
 		ReadTimeout:  cfg.HTTTPServer.Timeout,
 		WriteTimeout: cfg.HTTTPServer.Timeout,

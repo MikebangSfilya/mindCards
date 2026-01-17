@@ -15,7 +15,7 @@ type Config struct {
 }
 
 type HTTTPServer struct {
-	Adress      string        `yaml:"addres" env-default:"localhost:8080"`
+	Address     string        `yaml:"address" env-default:"localhost:8080"`
 	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
 	IdleTimeout time.Duration `yaml:"idle-timeout" env-default:"30s"`
 }
@@ -23,8 +23,8 @@ type HTTTPServer struct {
 type ConfigDB struct {
 	DBHost string `yaml:"DB_HOST"`
 	DBPort string `yaml:"DB_PORT"`
-	DBUSer string `yaml:"DB_USER"`
-	DBPass string `yaml:"DB_PASSWORD"`
+	DBUser string `yaml:"DB_USER"`
+	DBPass string `yaml:"DB_PASS"`
 	DBName string `yaml:"DB_NAME"`
 }
 
@@ -35,7 +35,7 @@ func MustLoad() Config {
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		log.Fatal("config file not exitst")
+		log.Fatal("config file not exits")
 	}
 
 	var cfg Config
