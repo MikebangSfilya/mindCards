@@ -13,6 +13,7 @@ import (
 	"github.com/MikebangSfilya/mindCards/internal/cards"
 	"github.com/MikebangSfilya/mindCards/internal/config"
 	"github.com/MikebangSfilya/mindCards/internal/repository/db"
+	"github.com/MikebangSfilya/mindCards/internal/repository/redis"
 	"github.com/MikebangSfilya/mindCards/internal/users"
 
 	"github.com/go-chi/chi/v5"
@@ -39,14 +40,16 @@ func main() {
 	}
 	defer db.Close()
 
+	redis := initRedis(cfg)
+	defer redis.Client.Close()
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
 
 	router := chi.NewRouter()
 
-	router.Use(middleware.Logger)
-	router.Use(middleware.Recoverer)
+	routerMiddleware(router)
 
 	cardsRepo := cards.NewCardPool(db)
 	userRepo := users.NewUserPool(db)
@@ -58,15 +61,9 @@ func main() {
 	cardsHandler.RegistredRoutes(router)
 	router.Post("/user", users.SaveUser(userRepo))
 
-	srv := &http.Server{
-		Addr:         cfg.Address,
-		Handler:      router,
-		ReadTimeout:  cfg.HTTTPServer.Timeout,
-		WriteTimeout: cfg.HTTTPServer.Timeout,
-		IdleTimeout:  cfg.HTTTPServer.IdleTimeout,
-	}
-	go func() {
+	srv := newServer(cfg, router)
 
+	go func() {
 		log.Println(" Server starting")
 		if err := srv.ListenAndServe(); err != nil {
 			slog.Warn(
@@ -87,4 +84,25 @@ func main() {
 	}
 	log.Print("Shutdown end")
 
+}
+
+func newServer(cfg config.Config, router chi.Router) *http.Server {
+	return &http.Server{
+		Addr:         cfg.Address,
+		Handler:      router,
+		ReadTimeout:  cfg.HTTTPServer.Timeout,
+		WriteTimeout: cfg.HTTTPServer.Timeout,
+		IdleTimeout:  cfg.HTTTPServer.IdleTimeout,
+	}
+}
+
+func routerMiddleware(router *chi.Mux) *chi.Mux {
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
+	return router
+}
+
+func initRedis(cfg config.Config) *redis.Redis {
+	rd := redis.MustLoad(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
+	return rd
 }
