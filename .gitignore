@@ -1,6 +1,5 @@
 .env
 sort
-Makefile
 app
 coverage.out
 *.html

@@ -12,7 +12,7 @@ import (
 
 	"github.com/MikebangSfilya/mindCards/internal/cards"
 	"github.com/MikebangSfilya/mindCards/internal/config"
-	database "github.com/MikebangSfilya/mindCards/internal/db"
+	"github.com/MikebangSfilya/mindCards/internal/repository/db"
 	"github.com/MikebangSfilya/mindCards/internal/users"
 
 	"github.com/go-chi/chi/v5"
