@@ -37,7 +37,18 @@ func MustLoad(host, port, password string, db int) *Redis {
 		_ = client.Close()
 		panic(fmt.Sprintf("%s: %v", op, err))
 	}
-	slog.Info("redis connected successfully", slog.String("addr", addr))
+	slog.Info("Redis connected successfully", slog.String("addr", addr))
 
 	return &Redis{Client: client}
+}
+
+func (r *Redis) SetCardCache(ctx context.Context, userID int, cardID int, data []byte, ttl time.Duration) error {
+	const op = "repository.redis.SetCardCache"
+
+	key := fmt.Sprintf("cards:u:%d:c:%d", userID, cardID)
+	err := r.Client.Set(ctx, key, data, ttl).Err()
+	if err != nil {
+		return fmt.Errorf("failed to set key %s: %v, %s", key, err, op)
+	}
+	return nil
 }

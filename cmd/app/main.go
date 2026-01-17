@@ -49,7 +49,7 @@ func main() {
 
 	router := chi.NewRouter()
 
-	routerMiddleware(router)
+	applyMiddleware(router)
 
 	cardsRepo := cards.NewCardPool(db)
 	userRepo := users.NewUserPool(db)
@@ -96,10 +96,9 @@ func newServer(cfg config.Config, router chi.Router) *http.Server {
 	}
 }
 
-func routerMiddleware(router *chi.Mux) *chi.Mux {
-	router.Use(middleware.Logger)
-	router.Use(middleware.Recoverer)
-	return router
+func applyMiddleware(r chi.Router) {
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 }
 
 func initRedis(cfg config.Config) *redis.Redis {
