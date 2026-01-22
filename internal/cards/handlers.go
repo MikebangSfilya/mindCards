@@ -145,7 +145,6 @@ func (h *Handler) GetCards() http.HandlerFunc {
 			h.handleError(w, err, errFailToAdd.Error(), http.StatusInternalServerError)
 			return
 		}
-		slog.Info("Get cards succeful")
 
 		w.Header().Set("Content-Type", "application/json")
 		if err := encoder(w, cards); err != nil {

@@ -7,38 +7,35 @@ import (
 	"strings"
 
 	"github.com/MikebangSfilya/mindCards/internal/storage"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type DBQuerier interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
 type CardRepository struct {
-	db *pgxpool.Pool
+	pool *pgxpool.Pool
 }
 
-type CardTransaction struct {
-	tx pgx.Tx
-}
-
-func NewCardPool(db *pgxpool.Pool) Repo {
+func NewCardPool(db *pgxpool.Pool) *CardRepository {
 	repo := CardRepository{
-		db: db,
+		pool: db,
 	}
 
 	return &repo
 }
 
-func (r *CardRepository) BeginTransaction(ctx context.Context) (Transaction, error) {
-	tx, err := r.db.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("begin transaction: %w", err)
+func (ct *CardRepository) AddCard(ctx context.Context, db DBQuerier, userId int, card *MindCard) error {
+	if db == nil {
+		db = ct.pool
 	}
-	return &CardTransaction{
-		tx: tx,
-	}, nil
-}
 
-func (ct *CardTransaction) AddCard(ctx context.Context, userId int, card *MindCard) error {
 	query := `
 	INSERT INTO memory_cards 
     (user_id, title, card_description, tag, created_at, level_study, learned)
@@ -48,20 +45,23 @@ func (ct *CardTransaction) AddCard(ctx context.Context, userId int, card *MindCa
 
 	card.Tag = strings.ToLower(card.Tag)
 
-	err := ct.tx.QueryRow(ctx, query, userId, card.Title, card.Description, card.Tag, card.CreatedAt, card.LevelStudy, card.Learned).Scan(&card.CardID)
+	err := db.QueryRow(ctx, query, userId, card.Title, card.Description, card.Tag, card.CreatedAt, card.LevelStudy, card.Learned).Scan(&card.CardID)
 	if err != nil {
 		return fmt.Errorf("SQL error: %w", err)
 	}
 	return nil
 }
 
-func (ct *CardTransaction) DeleteCard(ctx context.Context, cardId, userId int) error {
+func (ct *CardRepository) DeleteCard(ctx context.Context, db DBQuerier, cardId, userId int) error {
+	if db == nil {
+		db = ct.pool
+	}
 	query := `
     DELETE FROM memory_cards 
     WHERE card_id = $1 AND user_id = $2
     `
 
-	result, err := ct.tx.Exec(ctx, query, cardId, userId)
+	result, err := db.Exec(ctx, query, cardId, userId)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,10 @@ func (ct *CardTransaction) DeleteCard(ctx context.Context, cardId, userId int) e
 	return nil
 }
 
-func (ct *CardTransaction) UpdateCardDescription(ctx context.Context, cardId, userId int, newDesc string) (storage.CardRow, error) {
+func (ct *CardRepository) UpdateCardDescription(ctx context.Context, db DBQuerier, cardId, userId int, newDesc string) (storage.CardRow, error) {
+	if db == nil {
+		db = ct.pool
+	}
 	query := `
         UPDATE memory_cards
         SET card_description = $1
@@ -89,7 +92,7 @@ func (ct *CardTransaction) UpdateCardDescription(ctx context.Context, cardId, us
     `
 
 	var card storage.CardRow
-	err := ct.tx.QueryRow(ctx, query, newDesc, cardId, userId).Scan(
+	err := db.QueryRow(ctx, query, newDesc, cardId, userId).Scan(
 		&card.CardID,
 		&card.UserID,
 		&card.Title,
@@ -111,7 +114,10 @@ func (ct *CardTransaction) UpdateCardDescription(ctx context.Context, cardId, us
 
 }
 
-func (ct *CardTransaction) GetCards(ctx context.Context, userId int, limit, offset int16) ([]storage.CardRow, error) {
+func (ct *CardRepository) GetCards(ctx context.Context, db DBQuerier, userId int, limit, offset int16) ([]storage.CardRow, error) {
+	if db == nil {
+		db = ct.pool
+	}
 	query := `
 	SELECT card_id, user_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
@@ -120,7 +126,7 @@ func (ct *CardTransaction) GetCards(ctx context.Context, userId int, limit, offs
 	
 	`
 
-	rows, err := ct.tx.Query(ctx, query, userId, limit, offset)
+	rows, err := db.Query(ctx, query, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +135,10 @@ func (ct *CardTransaction) GetCards(ctx context.Context, userId int, limit, offs
 	return scanRows(rows)
 }
 
-func (ct *CardTransaction) GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]storage.CardRow, error) {
+func (ct *CardRepository) GetCardsByTag(ctx context.Context, db DBQuerier, tag string, userId int, limit, offset int16) ([]storage.CardRow, error) {
+	if db == nil {
+		db = ct.pool
+	}
 	query := `
 	SELECT card_id, user_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
@@ -137,7 +146,7 @@ func (ct *CardTransaction) GetCardsByTag(ctx context.Context, tag string, userId
 	LIMIT $3 OFFSET $4
 	`
 
-	rows, err := ct.tx.Query(ctx, query, tag, userId, limit, offset)
+	rows, err := db.Query(ctx, query, tag, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -146,24 +155,19 @@ func (ct *CardTransaction) GetCardsByTag(ctx context.Context, tag string, userId
 	return scanRows(rows)
 }
 
-func (ct *CardTransaction) GetCardById(ctx context.Context, cardId, userId int) (storage.CardRow, error) {
+func (ct *CardRepository) GetCardById(ctx context.Context, db DBQuerier, cardId, userId int) (storage.CardRow, error) {
+	if db == nil {
+		db = ct.pool
+	}
 	query := `
 	SELECT card_id, user_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
 	WHERE card_id = $1 AND user_id = $2
 	`
 
-	row := ct.tx.QueryRow(ctx, query, cardId, userId)
+	row := db.QueryRow(ctx, query, cardId, userId)
 
 	return scanRow(row)
-}
-
-func (ct *CardTransaction) Commit(ctx context.Context) error {
-	return ct.tx.Commit(ctx)
-}
-
-func (ct *CardTransaction) Rollback(ctx context.Context) error {
-	return ct.tx.Rollback(ctx)
 }
 
 func scanRow(row pgx.Row) (storage.CardRow, error) {

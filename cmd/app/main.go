@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"log/slog"
 	"net/http"
@@ -38,10 +39,8 @@ func main() {
 		log.Fatal("Database connection failed")
 		return
 	}
-	defer db.Close()
 
 	red := initRedis(cfg)
-	defer red.Client.Close()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
@@ -54,7 +53,8 @@ func main() {
 	cardsRepo := cards.NewCardPool(db)
 	userRepo := users.NewUserPool(db)
 
-	cardsService := cards.NewService(cardsRepo, logger, red)
+	txMan := cards.NewTxManager(db)
+	cardsService := cards.NewService(cardsRepo, txMan, logger, red)
 	cardsHandler := cards.New(cardsService)
 
 	//registrated handlers
@@ -66,9 +66,11 @@ func main() {
 	go func() {
 		log.Println(" Server starting")
 		if err := srv.ListenAndServe(); err != nil {
-			slog.Warn(
-				"Server start failed or shutdown",
-				"server error", err)
+			if !errors.Is(err, http.ErrServerClosed) {
+				slog.Warn(
+					"Server start failed or shutdown",
+					"server error", err)
+			}
 		}
 	}()
 
@@ -82,6 +84,9 @@ func main() {
 	if err := srv.Shutdown(shutdown); err != nil {
 		log.Print("shutdown fail")
 	}
+
+	db.Close()
+	red.Client.Close()
 	log.Print("Shutdown end")
 
 }
@@ -97,7 +102,7 @@ func newServer(cfg config.Config, router chi.Router) *http.Server {
 }
 
 func applyMiddleware(r chi.Router) {
-	r.Use(middleware.Logger)
+	//r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 }
 

@@ -2,76 +2,89 @@ package cards
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	redis2 "github.com/MikebangSfilya/mindCards/internal/repository/redis"
 	"github.com/MikebangSfilya/mindCards/internal/storage"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Transaction interface {
-	AddCard(ctx context.Context, userId int, card *MindCard) error
-	UpdateCardDescription(ctx context.Context, cardId, userId int, newDesc string) (storage.CardRow, error)
-	DeleteCard(ctx context.Context, cardId, userId int) error
-	GetCards(ctx context.Context, userId int, limit, offset int16) ([]storage.CardRow, error)
-	GetCardById(ctx context.Context, cardId, userId int) (storage.CardRow, error)
-	GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]storage.CardRow, error)
-	Commit(ctx context.Context) error
-	Rollback(ctx context.Context) error
+type txManager struct {
+	pool *pgxpool.Pool
 }
 
 type Repo interface {
-	BeginTransaction(ctx context.Context) (Transaction, error)
+	AddCard(ctx context.Context, db DBQuerier, userId int, card *MindCard) error
+	UpdateCardDescription(ctx context.Context, db DBQuerier, cardId, userId int, newDesc string) (storage.CardRow, error)
+	DeleteCard(ctx context.Context, db DBQuerier, cardId, userId int) error
+	GetCards(ctx context.Context, db DBQuerier, userId int, limit, offset int16) ([]storage.CardRow, error)
+	GetCardsByTag(ctx context.Context, db DBQuerier, tag string, userId int, limit, offset int16) ([]storage.CardRow, error)
+	GetCardById(ctx context.Context, db DBQuerier, cardId, userId int) (storage.CardRow, error)
 }
 
-// general Service struct
+func NewTxManager(pool *pgxpool.Pool) *txManager {
+	return &txManager{pool: pool}
+}
+
+func (tm *txManager) WithinTransaction(ctx context.Context, fn func(ctx context.Context, q DBQuerier) error) error {
+	tx, err := tm.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("txManager.WithinTransaction: %w", err)
+	}
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback(ctx)
+			panic(p)
+		}
+	}()
+
+	err = fn(ctx, tx)
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
 type Service struct {
-	Repo   Repo
-	Redis  *redis2.Redis
-	logger *slog.Logger
+	Repo      Repo
+	txManager txManager
+	Redis     *redis2.Redis
+	logger    *slog.Logger
 }
 
-func NewService(repo Repo, logger *slog.Logger, redis *redis2.Redis) *Service {
+func NewService(repo *CardRepository, txManager *txManager, logger *slog.Logger, redis *redis2.Redis) *Service {
 	serviceLogger := logger.With("component", "service")
 	return &Service{
-		Repo:   repo,
-		Redis:  redis,
-		logger: serviceLogger,
+		Repo:      repo,
+		txManager: *txManager,
+		Redis:     redis,
+		logger:    serviceLogger,
 	}
 }
 
 // AddCards cards to DB
 func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) ([]*MDAddedDTO, error) {
 
-	tx, err := s.Repo.BeginTransaction(ctx)
-	if err != nil {
-		s.logger.Error("failed to begin transaction", "error", err)
-		return nil, fmt.Errorf("begin transaction: %w", err)
-	}
-
-	defer tx.Rollback(ctx)
-
 	results := make([]*MDAddedDTO, 0, len(cardParams))
 
-	for i, cardParam := range cardParams {
-		card := NewCard(cardParam.Title, cardParam.Description, cardParam.Tag)
+	err := s.txManager.WithinTransaction(ctx, func(ctx context.Context, q DBQuerier) error {
+		for _, cardParam := range cardParams {
+			card := NewCard(cardParam.Title, cardParam.Description, cardParam.Tag)
 
-		if err := tx.AddCard(ctx, userId, card); err != nil {
-			s.logger.Error("failed to add card", "index", i, "error", err)
-			_ = tx.Rollback(ctx)
-			return nil, fmt.Errorf("add card at index %d: %w", i, err)
+			if err := s.Repo.AddCard(ctx, q, userId, card); err != nil {
+				return err
+			}
+			results = append(results, &MDAddedDTO{})
 		}
-		results = append(results, &MDAddedDTO{
-			Title:       cardParam.Title,
-			Description: cardParam.Description,
-			Tag:         cardParam.Tag,
-		})
+		return nil
+	})
 
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		s.logger.Error("failed to commit", "error", err)
-		return nil, fmt.Errorf("commit: %w", err)
+	if err != nil {
+		return nil, fmt.Errorf("batch add cards failed: %w", err)
 	}
 
 	s.logger.Info("batch add completed", "count", len(results))
@@ -81,108 +94,116 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 
 // DeleteCard card from DB
 func (s *Service) DeleteCard(ctx context.Context, cardId, userId int) error {
-	tx, err := s.Repo.BeginTransaction(ctx)
+	key := fmt.Sprintf("cards:u:%d:c:%d", userId, cardId)
+
+	err := s.txManager.WithinTransaction(ctx, func(ctx context.Context, q DBQuerier) error {
+		if err := s.Repo.DeleteCard(ctx, q, cardId, userId); err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-		s.logger.Error("failed to begin transaction", "error", err)
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	if err := tx.DeleteCard(ctx, cardId, userId); err != nil {
-		s.logger.Error("failed to delete card", "error", err)
-		return fmt.Errorf("delete card: %w", err)
+		return fmt.Errorf("batch delete cards failed: %w", err)
 	}
 
-	return tx.Commit(ctx)
+	_ = s.Redis.Delete(ctx, key)
+	s.logger.Info("batch delete completed", "cardId", cardId)
+	return nil
 }
 
 // UpdateCardDescription new description in DB
 func (s *Service) UpdateCardDescription(ctx context.Context, cardId, UserID int, cardsUp Update) (*MindCard, error) {
-	tx, err := s.Repo.BeginTransaction(ctx)
-	if err != nil {
-		s.logger.Error("failed to begin transaction", "error", err)
-		return nil, fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
+	key := fmt.Sprintf("cards:u:%d:c:%d", UserID, cardId)
 
-	row, err := tx.UpdateCardDescription(ctx, cardId, UserID, cardsUp.NewDescription)
+	row, err := s.Repo.UpdateCardDescription(ctx, nil, cardId, UserID, cardsUp.NewDescription)
 	if err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit: %w", err)
+		return nil, fmt.Errorf("update card description: %w", err)
 	}
 
+	s.logger.Info("update completed", "cardId", cardId)
+	if err := s.Redis.Delete(ctx, key); err != nil {
+		return nil, fmt.Errorf("redis delete: %w", err)
+	}
 	return rowToCard(row), nil
 }
 
-// UpdateLvl Возможно не понадобится
-func (s *Service) UpdateLvl() {
-
-}
-
-// Get list of cards
+// Getcards list of cards
 func (s *Service) GetCards(ctx context.Context, userId int, limit, offset int16) ([]*MindCard, error) {
-	tx, err := s.Repo.BeginTransaction(ctx)
-	if err != nil {
-		s.logger.Error("failed to begin transaction", "error", err)
-		return nil, fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
+	key := fmt.Sprintf("cards:u:%d:l:%d:o:%d", userId, limit, offset)
 
-	rows, err := tx.GetCards(ctx, userId, limit, offset)
+	var cachedCards []*MindCard
+	if s.getFromCache(ctx, key, &cachedCards) {
+		return cachedCards, nil
+	}
+
+	rows, err := s.Repo.GetCards(ctx, nil, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit: %w", err)
-	}
-
-	return rowsToCards(rows), nil
-
+	cards := rowsToCards(rows)
+	go func() {
+		setCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		if err := s.Redis.Set(setCtx, key, cards, 1*time.Minute); err != nil {
+			s.logger.Warn("redis set failed", "err", err)
+		}
+	}()
+	return cards, nil
 }
 
 // Get cards filtered by Tag
 func (s *Service) GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]*MindCard, error) {
-	tx, err := s.Repo.BeginTransaction(ctx)
-	if err != nil {
-		s.logger.Error("failed to begin transaction", "error", err)
-		return nil, fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
+	key := fmt.Sprintf("cards:u:%dt:%s:l:%d:o:%d", userId, tag, limit, offset)
 
-	rows, err := tx.GetCardsByTag(ctx, tag, userId, limit, offset)
+	var cachedCards []*MindCard
+	if s.getFromCache(ctx, key, &cachedCards) {
+		return cachedCards, nil
+	}
+
+	rows, err := s.Repo.GetCardsByTag(ctx, nil, tag, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit: %w", err)
-	}
+	cards := rowsToCards(rows)
 
-	return rowsToCards(rows), nil
+	go func() {
+		setCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		if err := s.Redis.Set(setCtx, key, cards, 1*time.Minute); err != nil {
+			s.logger.Warn("redis set failed", "err", err)
+		}
+	}()
+
+	return cards, nil
 }
 
 // Get one card by ID
-func (s *Service) GetCardById(ctx context.Context, cardId, userId int) (*MindCard, error) {
-	tx, err := s.Repo.BeginTransaction(ctx)
-	if err != nil {
-		s.logger.Error("failed to begin transaction", "error", err)
-		return nil, fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
+func (s *Service) GetCardById(ctx context.Context, cardID, userID int) (*MindCard, error) {
+	key := fmt.Sprintf("cards:u:%d:c:%d", userID, cardID)
 
-	row, err := tx.GetCardById(ctx, cardId, userId)
+	var card MindCard
+	if s.getFromCache(ctx, key, &card) {
+		return &card, nil
+	}
+
+	row, err := s.Repo.GetCardById(ctx, nil, cardID, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit: %w", err)
-	}
+	cardDB := rowToCard(row)
 
-	return rowToCard(row), nil
+	go func() {
+		setCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		if err := s.Redis.Set(setCtx, key, cardDB, time.Hour*24); err != nil {
+			s.logger.Error("failed to set card", "error", err)
+		}
+	}()
+	return cardDB, nil
 }
 
 func rowToCard(row storage.CardRow) *MindCard {
@@ -211,5 +232,18 @@ func rowsToCards(rows []storage.CardRow) []*MindCard {
 	}
 
 	return result
+}
 
+func (s *Service) getFromCache(ctx context.Context, key string, dest any) bool {
+	err := s.Redis.Get(ctx, key, dest)
+	if err == nil {
+		return true
+	}
+	if errors.Is(err, redis2.ErrCacheMiss) {
+		return false
+	}
+	s.logger.Warn("cache failure, clearing key", "key", key, "error", err)
+
+	_ = s.Redis.Delete(ctx, key)
+	return false
 }
