@@ -107,6 +107,6 @@ func applyMiddleware(r chi.Router) {
 }
 
 func initRedis(cfg config.Config) *redis2.Redis {
-	rd := redis2.MustLoad(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
+	rd, _ := redis2.New(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
 	return rd
 }

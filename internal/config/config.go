@@ -22,17 +22,17 @@ type Redis struct {
 	DB       int    `yaml:"db" env:"REDIS_DB" env-default:"0"`
 }
 type HTTTPServer struct {
-	Address     string        `yaml:"address" env-default:"localhost:8080"`
+	Address     string        `yaml:"address" env:"ADDRESS" env-default:"localhost:8080"`
 	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
 	IdleTimeout time.Duration `yaml:"idle-timeout" env-default:"30s"`
 }
 
 type ConfigDB struct {
-	DBHost string `yaml:"DB_HOST"`
-	DBPort string `yaml:"DB_PORT"`
-	DBUser string `yaml:"DB_USER"`
-	DBPass string `yaml:"DB_PASS"`
-	DBName string `yaml:"DB_NAME"`
+	DBHost string `yaml:"DB_HOST" env:"DB_HOST" env-default:"localhost"`
+	DBPort string `yaml:"DB_PORT" env:"DB_PORT" env-default:"5432"`
+	DBUser string `yaml:"DB_USER" env:"DB_USER" env-default:"postgres"`
+	DBPass string `yaml:"DB_PASS" env:"DB_PASSWORD" env-default:"secret"`
+	DBName string `yaml:"DB_NAME" env:"DB_NAME" env-default:"mindcards"`
 }
 
 func MustLoad() Config {
