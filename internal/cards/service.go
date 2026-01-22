@@ -172,7 +172,7 @@ func (s *Service) GetCardById(ctx context.Context, cardID, userID int) (*MindCar
 	var card MindCard
 	err := s.Redis.Get(ctx, key, &card)
 	if err == nil {
-		return &card, nil // Успешный хит
+		return &card, nil
 	}
 
 	tx, err := s.Repo.BeginTransaction(ctx)
@@ -200,6 +200,7 @@ func (s *Service) GetCardById(ctx context.Context, cardID, userID int) (*MindCar
 		if err := s.Redis.Set(setCtx, key, cardDB, time.Hour*24); err != nil {
 			s.logger.Error("failed to set card", "error", err)
 		}
+		s.logger.Info(fmt.Sprintf("card %s has been set", cardID))
 	}()
 
 	return cardDB, nil

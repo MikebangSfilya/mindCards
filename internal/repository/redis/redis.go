@@ -59,7 +59,7 @@ func (r *Redis) Get(ctx context.Context, key string, dest any) error {
 	data, err := r.Client.Get(ctx, key).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
-			return nil
+			return ErrCacheMiss
 		}
 		return fmt.Errorf("failed to get key %s: %w", key, err)
 	}
