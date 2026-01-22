@@ -18,8 +18,8 @@ type Redis struct {
 	Client *redis.Client
 }
 
-func MustLoad(host, port, password string, db int) *Redis {
-	const op = "repository.redis.MustLoad"
+func New(host, port, password string, db int) (*Redis, error) {
+	const op = "repository.redis.New"
 
 	addr := net.JoinHostPort(host, port)
 
@@ -39,18 +39,18 @@ func MustLoad(host, port, password string, db int) *Redis {
 			slog.Any("error", err),
 		)
 		_ = client.Close()
-		panic(fmt.Sprintf("%s: %v", op, err))
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
+
 	slog.Info("Redis connected successfully", slog.String("addr", addr))
 
-	return &Redis{Client: client}
+	return &Redis{Client: client}, nil
 }
 
 func (r *Redis) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
-
 	data, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("%v: failed to marshal value for key %s: %w", key, err)
+		return fmt.Errorf("failed to marshal value for key %s: %w", key, err)
 	}
 	return r.Client.Set(ctx, key, data, ttl).Err()
 }

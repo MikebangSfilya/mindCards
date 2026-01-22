@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  test:
+    name: Run Tests & Linter
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: mindcards
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Install golang-migrate
+        run: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
+      - name: Create config file
+        run: cp config.example.yaml config.yaml
+
+      - name: Run migrations
+        env:
+          POSTGRESQL_URL: "postgres://postgres:password@localhost:5432/mindcards?sslmode=disable"
+        run: migrate -path ./internal/repository/db/migrations -database "${POSTGRESQL_URL}" up
+
+      - name: Run tests
+        env:
+          CONFIG_PATH: config.yaml
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: password
+          DB_NAME: mindcards
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+        run: go test -v -race ./...
+
+      - name: Build binary check
+        run: go build -v ./...
+
+  docker:
+
+    needs: test
+    name: Docker Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build . -t mindcards:latest

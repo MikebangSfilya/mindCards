@@ -1,60 +1,79 @@
-# Project variables
-BINARY_NAME=mindcards
-MAIN_PATH=cmd/app/main.go
-DOCKER_COMPOSE=docker-compose.yml
+-include .env
+export
 
-.PHONY: all
-all: help
+COMPOSE = docker compose -f docker-compose.yml
+APP = mindcards
+BIN = bin/$(APP)
+MAIN_PATH = cmd/app/main.go
+DB_URL = postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
-.PHONY: build
-build: tidy
-	@echo "Building binary..."
+.PHONY: migrate-up migrate-down migrate-create migrate-version
+migrate-up:
+	migrate -path ./internal/repository/db/migrations -database "$(DB_URL)" up
+
+migrate-down:
+	migrate -path ./internal/repository/db/migrations -database "$(DB_URL)" down 1
+
+migrate-create:
+ifeq ($(strip $(NAME)),)
+	@echo Usage: make migrate-create NAME=some_name
+	@exit 1
+endif
+	migrate create -ext sql -dir internal/repository/db/migrations -seq $(NAME)
+
+migrate-version:
+	migrate -path ./internal/repository/db/migrations -database "$(DB_URL)" version
+
+build: deps
 	@mkdir -p bin
-	go build -o bin/$(BINARY_NAME) $(MAIN_PATH)
+	go build -o $(BIN) $(MAIN_PATH)
 
-.PHONY: run
-run: tidy
-	@echo "Starting application..."
+run:
 	go run $(MAIN_PATH)
 
-.PHONY: up
-up: docker-up
-	@echo "Starting application..."
-	go run $(MAIN_PATH)
+deps:
+	go mod tidy
+	go mod download
 
-.PHONY: test
 test:
-	@echo "Running tests..."
 	go test -v ./internal/...
 
-.PHONY: tidy
-tidy:
-	@echo "Cleaning dependencies..."
-	go mod tidy
-
-.PHONY: clean
 clean:
-	@echo "Cleaning up..."
 	rm -rf bin/
-	go clean -cache -modcache
 
-.PHONY: fix
-fix:
-	@echo "Fixing Go environment..."
-	go clean -cache -modcache -i -r
+compose-build:
+	$(COMPOSE) build
+
+
+up:
+	$(COMPOSE) up -d --build
+
+up-infra:
+	$(COMPOSE) up -d test-db mind-redis
+
+down:
+	$(COMPOSE) down
+
+down-full:
+	$(COMPOSE) down -v
+
+logs:
+	$(COMPOSE) logs -f
+
+db:
+	$(COMPOSE) exec test-db psql -U $(DB_USER) $(DB_NAME)
+
+tables:
+	$(COMPOSE) exec test-db psql -U $(DB_USER) $(DB_NAME) -c "\dt"
+
+tidy:
 	go mod tidy
 
-.PHONY: docker-up
-docker-up:
-	@echo "Starting Docker containers..."
-	docker-compose -f $(DOCKER_COMPOSE) up -d
+dev: up-infra build
+	./$(BIN)
 
-.PHONY: docker-down
-docker-down:
-	@echo "Stopping Docker containers..."
-	docker-compose -f $(DOCKER_COMPOSE) down
+reset: down-full compose-build up
 
-.PHONY: help
-help:
-	@echo "Available commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+.PHONY: tidy build run deps test clean \
+        compose-build up up-infra down down-full logs \
+        db tables dev reset
