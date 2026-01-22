@@ -2,6 +2,8 @@ package redis
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -9,6 +11,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 )
+
+var ErrCacheMiss = errors.New("cache miss")
 
 type Redis struct {
 	Client *redis.Client
@@ -42,13 +46,26 @@ func MustLoad(host, port, password string, db int) *Redis {
 	return &Redis{Client: client}
 }
 
-func (r *Redis) SetCardCache(ctx context.Context, userID int, cardID int, data []byte, ttl time.Duration) error {
-	const op = "repository.redis.SetCardCache"
+func (r *Redis) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
 
-	key := fmt.Sprintf("cards:u:%d:c:%d", userID, cardID)
-	err := r.Client.Set(ctx, key, data, ttl).Err()
+	data, err := json.Marshal(value)
 	if err != nil {
-		return fmt.Errorf("failed to set key %s: %v, %s", key, err, op)
+		return fmt.Errorf("%v: failed to marshal value for key %s: %w", key, err)
 	}
-	return nil
+	return r.Client.Set(ctx, key, data, ttl).Err()
+}
+
+func (r *Redis) Get(ctx context.Context, key string, dest any) error {
+	data, err := r.Client.Get(ctx, key).Bytes()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil
+		}
+		return fmt.Errorf("failed to get key %s: %w", key, err)
+	}
+	return json.Unmarshal(data, dest)
+}
+
+func (r *Redis) Delete(ctx context.Context, key string) error {
+	return r.Client.Del(ctx, key).Err()
 }
