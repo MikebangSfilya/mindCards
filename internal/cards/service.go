@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	redis2 "github.com/MikebangSfilya/mindCards/internal/repository/redis"
 	"github.com/MikebangSfilya/mindCards/internal/storage"
@@ -121,7 +122,7 @@ func (s *Service) UpdateLvl() {
 
 }
 
-// Get list of cards
+// Getcards list of cards
 func (s *Service) GetCards(ctx context.Context, userId int, limit, offset int16) ([]*MindCard, error) {
 	tx, err := s.Repo.BeginTransaction(ctx)
 	if err != nil {
@@ -165,7 +166,15 @@ func (s *Service) GetCardsByTag(ctx context.Context, tag string, userId int, lim
 }
 
 // Get one card by ID
-func (s *Service) GetCardById(ctx context.Context, cardId, userId int) (*MindCard, error) {
+func (s *Service) GetCardById(ctx context.Context, cardID, userID int) (*MindCard, error) {
+	key := fmt.Sprintf("cards:u:%d:c:%d", userID, cardID)
+
+	var card MindCard
+	err := s.Redis.Get(ctx, key, &card)
+	if err == nil {
+		return &card, nil // Успешный хит
+	}
+
 	tx, err := s.Repo.BeginTransaction(ctx)
 	if err != nil {
 		s.logger.Error("failed to begin transaction", "error", err)
@@ -173,7 +182,7 @@ func (s *Service) GetCardById(ctx context.Context, cardId, userId int) (*MindCar
 	}
 	defer tx.Rollback(ctx)
 
-	row, err := tx.GetCardById(ctx, cardId, userId)
+	row, err := tx.GetCardById(ctx, cardID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +191,18 @@ func (s *Service) GetCardById(ctx context.Context, cardId, userId int) (*MindCar
 		return nil, fmt.Errorf("commit: %w", err)
 	}
 
-	return rowToCard(row), nil
+	cardDB := rowToCard(row)
+
+	go func() {
+		setCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		if err := s.Redis.Set(setCtx, key, cardDB, time.Hour*24); err != nil {
+			s.logger.Error("failed to set card", "error", err)
+		}
+	}()
+
+	return cardDB, nil
 }
 
 func rowToCard(row storage.CardRow) *MindCard {
