@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"log/slog"
 	"net/http"
@@ -65,9 +66,11 @@ func main() {
 	go func() {
 		log.Println(" Server starting")
 		if err := srv.ListenAndServe(); err != nil {
-			slog.Warn(
-				"Server start failed or shutdown",
-				"server error", err)
+			if !errors.Is(err, http.ErrServerClosed) {
+				slog.Warn(
+					"Server start failed or shutdown",
+					"server error", err)
+			}
 		}
 	}()
 
@@ -99,7 +102,7 @@ func newServer(cfg config.Config, router chi.Router) *http.Server {
 }
 
 func applyMiddleware(r chi.Router) {
-	r.Use(middleware.Logger)
+	//r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 }
 

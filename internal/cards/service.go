@@ -125,11 +125,27 @@ func (s *Service) UpdateLvl() {
 
 // Getcards list of cards
 func (s *Service) GetCards(ctx context.Context, userId int, limit, offset int16) ([]*MindCard, error) {
+	key := fmt.Sprintf("cards:u:%d:l:%d:o:%d", userId, limit, offset)
+
+	var cachedCards []*MindCard
+	err := s.Redis.Get(ctx, key, &cachedCards)
+	if err == nil {
+		return cachedCards, nil
+	}
+
 	rows, err := s.Repo.GetCards(ctx, nil, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
-	return rowsToCards(rows), nil
+	cards := rowsToCards(rows)
+	go func() {
+		setCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		if err := s.Redis.Set(setCtx, key, cards, 1*time.Minute); err != nil {
+			s.logger.Warn("redis set failed", "err", err)
+		}
+	}()
+	return cards, nil
 }
 
 // Get cards filtered by Tag
@@ -167,7 +183,6 @@ func (s *Service) GetCardById(ctx context.Context, cardID, userID int) (*MindCar
 		if err := s.Redis.Set(setCtx, key, cardDB, time.Hour*24); err != nil {
 			s.logger.Error("failed to set card", "error", err)
 		}
-		s.logger.Info(fmt.Sprintf("card %s has been set", cardID))
 	}()
 	return cardDB, nil
 }
