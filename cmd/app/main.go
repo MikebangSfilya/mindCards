@@ -13,7 +13,7 @@ import (
 	"github.com/MikebangSfilya/mindCards/internal/cards"
 	"github.com/MikebangSfilya/mindCards/internal/config"
 	"github.com/MikebangSfilya/mindCards/internal/repository/db"
-	"github.com/MikebangSfilya/mindCards/internal/repository/redis"
+	redis2 "github.com/MikebangSfilya/mindCards/internal/repository/redis"
 	"github.com/MikebangSfilya/mindCards/internal/users"
 
 	"github.com/go-chi/chi/v5"
@@ -40,8 +40,8 @@ func main() {
 	}
 	defer db.Close()
 
-	redis := initRedis(cfg)
-	defer redis.Client.Close()
+	red := initRedis(cfg)
+	defer red.Client.Close()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
@@ -54,7 +54,7 @@ func main() {
 	cardsRepo := cards.NewCardPool(db)
 	userRepo := users.NewUserPool(db)
 
-	cardsService := cards.NewService(cardsRepo, logger)
+	cardsService := cards.NewService(cardsRepo, logger, red)
 	cardsHandler := cards.New(cardsService)
 
 	//registrated handlers
@@ -101,7 +101,7 @@ func applyMiddleware(r chi.Router) {
 	r.Use(middleware.Recoverer)
 }
 
-func initRedis(cfg config.Config) *redis.Redis {
-	rd := redis.MustLoad(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
+func initRedis(cfg config.Config) *redis2.Redis {
+	rd := redis2.MustLoad(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
 	return rd
 }

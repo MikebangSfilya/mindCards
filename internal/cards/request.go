@@ -26,11 +26,11 @@ func (c *Card) Validate() error {
 	trimmedTag := strings.TrimSpace(c.Tag)
 
 	if trimmedTitle == "" {
-		return fmt.Errorf("error validate, title is empty.")
+		return fmt.Errorf("error validate, title is empty")
 	} else if trimmedDesc == "" {
-		return fmt.Errorf("error validate, description is empty.")
+		return fmt.Errorf("error validate, description is empty")
 	} else if trimmedTag == "" {
-		return fmt.Errorf("error validate, tag is empty.")
+		return fmt.Errorf("error validate, tag is empty")
 	}
 	return nil
 }

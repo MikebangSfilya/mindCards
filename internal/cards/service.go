@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	redis2 "github.com/MikebangSfilya/mindCards/internal/repository/redis"
 	"github.com/MikebangSfilya/mindCards/internal/storage"
 )
 
@@ -26,13 +27,15 @@ type Repo interface {
 // general Service struct
 type Service struct {
 	Repo   Repo
+	Redis  *redis2.Redis
 	logger *slog.Logger
 }
 
-func NewService(repo Repo, logger *slog.Logger) *Service {
+func NewService(repo Repo, logger *slog.Logger, redis *redis2.Redis) *Service {
 	serviceLogger := logger.With("component", "service")
 	return &Service{
 		Repo:   repo,
+		Redis:  redis,
 		logger: serviceLogger,
 	}
 }
@@ -45,7 +48,7 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 		s.logger.Error("failed to begin transaction", "error", err)
 		return nil, fmt.Errorf("begin transaction: %w", err)
 	}
-	
+
 	defer tx.Rollback(ctx)
 
 	results := make([]*MDAddedDTO, 0, len(cardParams))
