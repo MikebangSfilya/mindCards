@@ -42,13 +42,21 @@ func BenchmarkService_FullCycle(b *testing.B) {
 	if err != nil {
 		b.Fatalf("failed to start postgres: %v", err)
 	}
-	defer pgContainer.Terminate(ctx)
+	defer func() {
+		if err := pgContainer.Terminate(ctx); err != nil {
+			b.Logf("failed to terminate postgres container: %v", err)
+		}
+	}()
 
 	redisContainer, err := redis.Run(ctx, "redis:7-alpine")
 	if err != nil {
 		b.Fatalf("failed to start redis: %v", err)
 	}
-	defer redisContainer.Terminate(ctx)
+	defer func() {
+		if err := redisContainer.Terminate(ctx); err != nil {
+			b.Logf("failed to terminate redis container: %v", err)
+		}
+	}()
 
 	pgConnStr, _ := pgContainer.ConnectionString(ctx, "sslmode=disable")
 	redisHost, _ := redisContainer.Host(ctx)
