@@ -72,8 +72,21 @@ tidy:
 dev: up-infra build
 	./$(BIN)
 
+# --- Testing & Benchmarking ---
+
+test:
+	go test -v ./internal/...
+
+# Run all benchmarks in the project
+bench:
+	go test -v -bench=. -benchmem ./internal/...
+
+# Run only the service full cycle benchmark
+bench-service:
+	go test -v -bench=BenchmarkService_FullCycle -benchmem ./internal/cards
+
 reset: down-full compose-build up
 
-.PHONY: tidy build run deps test clean \
+.PHONY: tidy build run deps test bench bench-service clean \
         compose-build up up-infra down down-full logs \
         db tables dev reset
