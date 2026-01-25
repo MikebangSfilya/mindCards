@@ -17,14 +17,6 @@ type MDAddedDTO struct {
 	Tag         string `json:"tag"`
 }
 
-func NewDelDTO(obj string) DTOdel_out {
-	return DTOdel_out{
-		Status:  "deleted",
-		Object:  obj,
-		TimeDel: time.Now(),
-	}
-}
-
 type ErrDto struct {
 	Err  string
 	Time time.Time

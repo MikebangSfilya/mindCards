@@ -51,16 +51,18 @@ func (tm *txManager) WithinTransaction(ctx context.Context, fn func(ctx context.
 
 type Service struct {
 	Repo      Repo
-	txManager txManager
+	txManager *txManager
+	Pool      *pgxpool.Pool
 	Redis     *redis2.Redis
 	logger    *slog.Logger
 }
 
-func NewService(repo *CardRepository, txManager *txManager, logger *slog.Logger, redis *redis2.Redis) *Service {
+func NewService(repo *CardRepository, txManager *txManager, pool *pgxpool.Pool, logger *slog.Logger, redis *redis2.Redis) *Service {
 	serviceLogger := logger.With("component", "service")
 	return &Service{
 		Repo:      repo,
-		txManager: *txManager,
+		txManager: txManager,
+		Pool:      pool,
 		Redis:     redis,
 		logger:    serviceLogger,
 	}
@@ -78,7 +80,11 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 			if err := s.Repo.AddCard(ctx, q, userId, card); err != nil {
 				return err
 			}
-			results = append(results, &MDAddedDTO{})
+			results = append(results, &MDAddedDTO{
+				Title:       card.Title,
+				Description: card.Description,
+				Tag:         card.Tag,
+			})
 		}
 		return nil
 	})
@@ -115,7 +121,7 @@ func (s *Service) DeleteCard(ctx context.Context, cardId, userId int) error {
 func (s *Service) UpdateCardDescription(ctx context.Context, cardId, UserID int, cardsUp Update) (*MindCard, error) {
 	key := fmt.Sprintf("cards:u:%d:c:%d", UserID, cardId)
 
-	row, err := s.Repo.UpdateCardDescription(ctx, nil, cardId, UserID, cardsUp.NewDescription)
+	row, err := s.Repo.UpdateCardDescription(ctx, s.Pool, cardId, UserID, cardsUp.NewDescription)
 	if err != nil {
 		return nil, fmt.Errorf("update card description: %w", err)
 	}
@@ -136,45 +142,34 @@ func (s *Service) GetCards(ctx context.Context, userId int, limit, offset int16)
 		return cachedCards, nil
 	}
 
-	rows, err := s.Repo.GetCards(ctx, nil, userId, limit, offset)
+	rows, err := s.Repo.GetCards(ctx, s.Pool, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 	cards := rowsToCards(rows)
-	go func() {
-		setCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-		if err := s.Redis.Set(setCtx, key, cards, 1*time.Minute); err != nil {
-			s.logger.Warn("redis set failed", "err", err)
-		}
-	}()
+
+	go s.setCache(key, cards, 5*time.Minute)
+
 	return cards, nil
 }
 
 // Get cards filtered by Tag
 func (s *Service) GetCardsByTag(ctx context.Context, tag string, userId int, limit, offset int16) ([]*MindCard, error) {
-	key := fmt.Sprintf("cards:u:%dt:%s:l:%d:o:%d", userId, tag, limit, offset)
+	key := fmt.Sprintf("cards:u:%d:t:%s:l:%d:o:%d", userId, tag, limit, offset)
 
 	var cachedCards []*MindCard
 	if s.getFromCache(ctx, key, &cachedCards) {
 		return cachedCards, nil
 	}
 
-	rows, err := s.Repo.GetCardsByTag(ctx, nil, tag, userId, limit, offset)
+	rows, err := s.Repo.GetCardsByTag(ctx, s.Pool, tag, userId, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 
 	cards := rowsToCards(rows)
 
-	go func() {
-		setCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-
-		if err := s.Redis.Set(setCtx, key, cards, 1*time.Minute); err != nil {
-			s.logger.Warn("redis set failed", "err", err)
-		}
-	}()
+	go s.setCache(key, cards, 5*time.Minute)
 
 	return cards, nil
 }
@@ -188,21 +183,14 @@ func (s *Service) GetCardById(ctx context.Context, cardID, userID int) (*MindCar
 		return &card, nil
 	}
 
-	row, err := s.Repo.GetCardById(ctx, nil, cardID, userID)
+	row, err := s.Repo.GetCardById(ctx, s.Pool, cardID, userID)
 	if err != nil {
 		return nil, err
 	}
 
 	cardDB := rowToCard(row)
 
-	go func() {
-		setCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-
-		if err := s.Redis.Set(setCtx, key, cardDB, time.Hour*24); err != nil {
-			s.logger.Error("failed to set card", "error", err)
-		}
-	}()
+	go s.setCache(key, cardDB, 24*time.Hour)
 	return cardDB, nil
 }
 
@@ -246,4 +234,12 @@ func (s *Service) getFromCache(ctx context.Context, key string, dest any) bool {
 
 	_ = s.Redis.Delete(ctx, key)
 	return false
+}
+
+func (s *Service) setCache(key string, dest any, ttl time.Duration) {
+	setCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := s.Redis.Set(setCtx, key, dest, ttl); err != nil {
+		s.logger.Warn("redis set failed", "err", err)
+	}
 }

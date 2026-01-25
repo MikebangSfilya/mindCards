@@ -16,7 +16,6 @@ import (
 	"github.com/MikebangSfilya/mindCards/internal/repository/db"
 	redis2 "github.com/MikebangSfilya/mindCards/internal/repository/redis"
 	"github.com/MikebangSfilya/mindCards/internal/users"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
@@ -54,10 +53,10 @@ func main() {
 	userRepo := users.NewUserPool(db)
 
 	txMan := cards.NewTxManager(db)
-	cardsService := cards.NewService(cardsRepo, txMan, logger, red)
+	cardsService := cards.NewService(cardsRepo, txMan, db, logger, red)
 	cardsHandler := cards.New(cardsService)
 
-	//registrated handlers
+	//reg handlers
 	cardsHandler.RegistredRoutes(router)
 	router.Post("/user", users.SaveUser(userRepo))
 

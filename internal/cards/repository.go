@@ -32,10 +32,6 @@ func NewCardPool(db *pgxpool.Pool) *CardRepository {
 }
 
 func (ct *CardRepository) AddCard(ctx context.Context, db DBQuerier, userId int, card *MindCard) error {
-	if db == nil {
-		db = ct.pool
-	}
-
 	query := `
 	INSERT INTO memory_cards 
     (user_id, title, card_description, tag, created_at, level_study, learned)
@@ -53,9 +49,6 @@ func (ct *CardRepository) AddCard(ctx context.Context, db DBQuerier, userId int,
 }
 
 func (ct *CardRepository) DeleteCard(ctx context.Context, db DBQuerier, cardId, userId int) error {
-	if db == nil {
-		db = ct.pool
-	}
 	query := `
     DELETE FROM memory_cards 
     WHERE card_id = $1 AND user_id = $2
@@ -73,9 +66,6 @@ func (ct *CardRepository) DeleteCard(ctx context.Context, db DBQuerier, cardId, 
 }
 
 func (ct *CardRepository) UpdateCardDescription(ctx context.Context, db DBQuerier, cardId, userId int, newDesc string) (storage.CardRow, error) {
-	if db == nil {
-		db = ct.pool
-	}
 	query := `
         UPDATE memory_cards
         SET card_description = $1
@@ -115,9 +105,6 @@ func (ct *CardRepository) UpdateCardDescription(ctx context.Context, db DBQuerie
 }
 
 func (ct *CardRepository) GetCards(ctx context.Context, db DBQuerier, userId int, limit, offset int16) ([]storage.CardRow, error) {
-	if db == nil {
-		db = ct.pool
-	}
 	query := `
 	SELECT card_id, user_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
@@ -136,9 +123,6 @@ func (ct *CardRepository) GetCards(ctx context.Context, db DBQuerier, userId int
 }
 
 func (ct *CardRepository) GetCardsByTag(ctx context.Context, db DBQuerier, tag string, userId int, limit, offset int16) ([]storage.CardRow, error) {
-	if db == nil {
-		db = ct.pool
-	}
 	query := `
 	SELECT card_id, user_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
@@ -156,9 +140,6 @@ func (ct *CardRepository) GetCardsByTag(ctx context.Context, db DBQuerier, tag s
 }
 
 func (ct *CardRepository) GetCardById(ctx context.Context, db DBQuerier, cardId, userId int) (storage.CardRow, error) {
-	if db == nil {
-		db = ct.pool
-	}
 	query := `
 	SELECT card_id, user_id, title, card_description, tag, created_at, level_study, learned
 	FROM memory_cards
