@@ -1,0 +1,7 @@
+services:
+  test-db:
+    ports:
+      - "${DB_PORT}:5432"
+  mind-redis:
+    ports:
+      - "${REDIS_PORT}:6379"

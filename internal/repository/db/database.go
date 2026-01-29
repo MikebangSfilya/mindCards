@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/MikebangSfilya/mindCards/internal/config"
 
@@ -21,19 +22,19 @@ func CreateDataBase(cfg config.Config) *pgxpool.Pool {
 	)
 	slog.Info(
 		"Database connection",
-		"host", cfg.DBHost,
-		"port", cfg.DBPort,
-		"database", cfg.DBName,
-		"user", cfg.DBUser,
-	)
+		slog.String("host", cfg.DBHost),
+		slog.String("port", cfg.DBPort),
+		slog.String("database", cfg.DBName),
+		slog.String("user", cfg.DBUser))
 
 	dbPool, err := pgxpool.New(context.Background(), connStr)
 	if err != nil {
 
-		slog.Error(
-			"Database connection fail",
-			"error", err,
-			"db", "pgxpool")
+		slog.Error("Database connection fail",
+			slog.Group("Error",
+				slog.String("error", err.Error()),
+				slog.Time("time", time.Now())))
+
 		return nil
 	}
 

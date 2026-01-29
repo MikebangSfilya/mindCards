@@ -13,6 +13,7 @@ import (
 
 	"github.com/MikebangSfilya/mindCards/internal/cards"
 	"github.com/MikebangSfilya/mindCards/internal/config"
+	sl "github.com/MikebangSfilya/mindCards/internal/lib/logger"
 	"github.com/MikebangSfilya/mindCards/internal/repository/db"
 	redis2 "github.com/MikebangSfilya/mindCards/internal/repository/redis"
 	"github.com/MikebangSfilya/mindCards/internal/users"
@@ -23,27 +24,27 @@ import (
 
 func main() {
 
-	// the application is listening for the SIGTERM signal to exit
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
 	if err := godotenv.Load(); err != nil {
 		log.Printf(".env not found: %v", err)
 	}
 
 	cfg := config.MustLoad()
 
+	sl := sl.SetupLogger(cfg.Env)
+	slog.SetDefault(sl)
+	sl.Info("config loaded, start application")
+
+	// the application is listening for the SIGTERM signal to exit
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	db := database.CreateDataBase(cfg)
 	if db == nil {
-		log.Fatal("Database connection failed")
-		return
+		sl.Error("Database connection failed")
+		os.Exit(1)
 	}
 
 	red := initRedis(cfg)
-
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
 
 	router := chi.NewRouter()
 
@@ -53,7 +54,7 @@ func main() {
 	userRepo := users.NewUserPool(db)
 
 	txMan := cards.NewTxManager(db)
-	cardsService := cards.NewService(cardsRepo, txMan, db, logger, red)
+	cardsService := cards.NewService(cardsRepo, txMan, db, sl, red)
 	cardsHandler := cards.New(cardsService)
 
 	//reg handlers
@@ -63,7 +64,7 @@ func main() {
 	srv := newServer(cfg, router)
 
 	go func() {
-		log.Println(" Server starting")
+		sl.Info("Server starting")
 		if err := srv.ListenAndServe(); err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
 				slog.Warn(
@@ -78,15 +79,15 @@ func main() {
 	shutdown, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	log.Println("Shutting down gracefully...")
+	sl.Info("Shutting down gracefully...")
 
 	if err := srv.Shutdown(shutdown); err != nil {
-		log.Print("shutdown fail")
+		sl.Info("shutdown fail")
 	}
 
 	db.Close()
 	red.Client.Close()
-	log.Print("Shutdown end")
+	sl.Info("Shutdown end")
 
 }
 
