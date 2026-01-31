@@ -78,7 +78,7 @@ func BenchmarkService_FullCycle(b *testing.B) {
 
 	repo := NewCardPool(pool)
 	txM := NewTxManager(pool)
-	service := NewService(repo, txM, logger, redisRepo)
+	service := NewService(repo, txM, pool, logger, redisRepo)
 
 	userID := 1
 	_, err = pool.Exec(ctx, "INSERT INTO users (user_id, email, password_hash) VALUES ($1, 'bench@test.com', 'hash')", userID)
