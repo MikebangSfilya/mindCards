@@ -48,6 +48,10 @@ func New(host, port, password string, db int) (*Redis, error) {
 }
 
 func (r *Redis) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
+	if r == nil || r.Client == nil {
+		return nil
+	}
+
 	data, err := json.Marshal(value)
 	if err != nil {
 		return fmt.Errorf("failed to marshal value for key %s: %w", key, err)
@@ -56,6 +60,10 @@ func (r *Redis) Set(ctx context.Context, key string, value any, ttl time.Duratio
 }
 
 func (r *Redis) Get(ctx context.Context, key string, dest any) error {
+	if r == nil || r.Client == nil {
+		return ErrCacheMiss
+	}
+
 	data, err := r.Client.Get(ctx, key).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -67,5 +75,31 @@ func (r *Redis) Get(ctx context.Context, key string, dest any) error {
 }
 
 func (r *Redis) Delete(ctx context.Context, key string) error {
+	if r == nil || r.Client == nil {
+		return nil
+	}
+
 	return r.Client.Del(ctx, key).Err()
+}
+
+func (r *Redis) DeleteByPrefix(ctx context.Context, prefix string) error {
+	if r == nil || r.Client == nil {
+		return nil
+	}
+
+	iter := r.Client.Scan(ctx, 0, prefix+"*", 100).Iterator()
+	keys := make([]string, 0, 16)
+	for iter.Next(ctx) {
+		keys = append(keys, iter.Val())
+	}
+
+	if err := iter.Err(); err != nil {
+		return fmt.Errorf("failed to scan keys by prefix %s: %w", prefix, err)
+	}
+
+	if len(keys) == 0 {
+		return nil
+	}
+
+	return r.Client.Del(ctx, keys...).Err()
 }

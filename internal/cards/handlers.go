@@ -79,7 +79,7 @@ func (h *Handler) AddCards() http.HandlerFunc {
 
 		result, err := h.Service.AddCards(ctx, usId, CardIn)
 		if err != nil {
-			h.handleError(w, err, ErrDecodeJSON, http.StatusBadRequest)
+			h.handleError(w, err, ErrAddCard, http.StatusInternalServerError)
 			return
 		}
 
@@ -174,6 +174,7 @@ func (h *Handler) GetByTag() http.HandlerFunc {
 		p, err := h.limitOffset(limitStr, offsetStr)
 		if err != nil {
 			h.handleError(w, err, ErrValidate, http.StatusBadRequest)
+			return
 		}
 
 		cards, err := h.Service.GetCardsByTag(ctx, tag, usId, p.limit, p.offset)
@@ -265,9 +266,9 @@ func (h *Handler) UpdateCard() http.HandlerFunc {
 			return
 		}
 		if err := encoder(w, card); err != nil {
+			h.handleError(w, err, ErrEncodeJSON, http.StatusInternalServerError)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
 	}
 }
 
@@ -291,6 +292,7 @@ func decoder(r *http.Request, dto any) error {
 
 // help func for encode json
 func encoder(w http.ResponseWriter, resp any) error {
+	w.Header().Set("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(resp)
 }
 
@@ -298,7 +300,9 @@ func encoder(w http.ResponseWriter, resp any) error {
 func (h *Handler) handleError(w http.ResponseWriter, err error, msg string, code int) {
 	slog.Error(msg, "err", err, "package", "handlers")
 	errDTO := NewErr(err)
-	http.Error(w, errDTO.ToString(), code)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	_, _ = w.Write([]byte(errDTO.ToString()))
 }
 
 func strToI(s string) (int16, error) {

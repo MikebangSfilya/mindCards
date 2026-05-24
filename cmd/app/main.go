@@ -31,6 +31,10 @@ func main() {
 		log.Printf(".env not found: %v", err)
 	}
 
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+
 	cfg := config.MustLoad()
 
 	db := database.CreateDataBase(cfg)
@@ -39,11 +43,10 @@ func main() {
 		return
 	}
 
-	red := initRedis(cfg)
-
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
+	red, err := initRedis(cfg)
+	if err != nil {
+		logger.Warn("redis unavailable, continuing without cache", "err", err)
+	}
 
 	router := chi.NewRouter()
 
@@ -85,7 +88,9 @@ func main() {
 	}
 
 	db.Close()
-	red.Client.Close()
+	if red != nil && red.Client != nil {
+		_ = red.Client.Close()
+	}
 	log.Print("Shutdown end")
 
 }
@@ -105,7 +110,6 @@ func applyMiddleware(r chi.Router) {
 	r.Use(middleware.Recoverer)
 }
 
-func initRedis(cfg config.Config) *redis2.Redis {
-	rd, _ := redis2.New(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
-	return rd
+func initRedis(cfg config.Config) (*redis2.Redis, error) {
+	return redis2.New(cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
 }

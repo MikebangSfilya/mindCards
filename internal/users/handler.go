@@ -31,7 +31,7 @@ func SaveUser(save Save) http.HandlerFunc {
 		u, err := NewUser(uReq.Email, uReq.Password)
 
 		if err != nil {
-			handleError(w, err, err.Error(), http.StatusInternalServerError)
+			handleError(w, err, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -68,5 +68,7 @@ func encoder(w http.ResponseWriter, resp any) error {
 func handleError(w http.ResponseWriter, err error, msg string, code int) {
 	slog.Error(msg, "err", err, "package", "handlers")
 	errDTO := NewErr(err)
-	http.Error(w, errDTO.ToString(), code)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	_, _ = w.Write([]byte(errDTO.ToString()))
 }

@@ -16,6 +16,10 @@ type txManager struct {
 	pool *pgxpool.Pool
 }
 
+type TxManager interface {
+	WithinTransaction(ctx context.Context, fn func(ctx context.Context, q DBQuerier) error) error
+}
+
 type Repo interface {
 	AddCard(ctx context.Context, db DBQuerier, userId int, card *MindCard) error
 	UpdateCardDescription(ctx context.Context, db DBQuerier, cardId, userId int, newDesc string) (storage.CardRow, error)
@@ -51,13 +55,13 @@ func (tm *txManager) WithinTransaction(ctx context.Context, fn func(ctx context.
 
 type Service struct {
 	Repo      Repo
-	txManager *txManager
+	txManager TxManager
 	Pool      *pgxpool.Pool
 	Redis     *redis2.Redis
 	logger    *slog.Logger
 }
 
-func NewService(repo *CardRepository, txManager *txManager, pool *pgxpool.Pool, logger *slog.Logger, redis *redis2.Redis) *Service {
+func NewService(repo Repo, txManager TxManager, pool *pgxpool.Pool, logger *slog.Logger, redis *redis2.Redis) *Service {
 	serviceLogger := logger.With("component", "service")
 	return &Service{
 		Repo:      repo,
@@ -93,6 +97,7 @@ func (s *Service) AddCards(ctx context.Context, userId int, cardParams []Card) (
 		return nil, fmt.Errorf("batch add cards failed: %w", err)
 	}
 
+	s.invalidateUserCollectionCaches(ctx, userId)
 	s.logger.Info("batch add completed", "count", len(results))
 
 	return results, nil
@@ -109,10 +114,10 @@ func (s *Service) DeleteCard(ctx context.Context, cardId, userId int) error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("batch delete cards failed: %w", err)
+		return fmt.Errorf("delete card failed: %w", err)
 	}
 
-	_ = s.Redis.Delete(ctx, key)
+	s.invalidateUserCaches(ctx, userId, key)
 	s.logger.Info("batch delete completed", "cardId", cardId)
 	return nil
 }
@@ -127,9 +132,7 @@ func (s *Service) UpdateCardDescription(ctx context.Context, cardId, UserID int,
 	}
 
 	s.logger.Info("update completed", "cardId", cardId)
-	if err := s.Redis.Delete(ctx, key); err != nil {
-		return nil, fmt.Errorf("redis delete: %w", err)
-	}
+	s.invalidateUserCaches(ctx, UserID, key)
 	return rowToCard(row), nil
 }
 
@@ -241,5 +244,28 @@ func (s *Service) setCache(key string, dest any, ttl time.Duration) {
 	defer cancel()
 	if err := s.Redis.Set(setCtx, key, dest, ttl); err != nil {
 		s.logger.Warn("redis set failed", "err", err)
+	}
+}
+
+func (s *Service) invalidateUserCaches(ctx context.Context, userID int, keys ...string) {
+	for _, key := range keys {
+		if err := s.Redis.Delete(ctx, key); err != nil {
+			s.logger.Warn("redis delete failed", "key", key, "err", err)
+		}
+	}
+
+	s.invalidateUserCollectionCaches(ctx, userID)
+}
+
+func (s *Service) invalidateUserCollectionCaches(ctx context.Context, userID int) {
+	prefixes := []string{
+		fmt.Sprintf("cards:u:%d:l:", userID),
+		fmt.Sprintf("cards:u:%d:t:", userID),
+	}
+
+	for _, prefix := range prefixes {
+		if err := s.Redis.DeleteByPrefix(ctx, prefix); err != nil {
+			s.logger.Warn("redis prefix delete failed", "prefix", prefix, "err", err)
+		}
 	}
 }
